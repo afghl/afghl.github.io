@@ -1,2 +1,4 @@
 # afghl.github.io
-Jekyll Blog
+
+
+[Blog](http://afghl.github.io)
