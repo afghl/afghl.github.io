@@ -7,15 +7,14 @@ categories: javascript front-end
 
 先看一道面试题：
 
-```
-有一个国家列表，现在要将国家列表放到A中，然后B可以由A选择，也可以有总列表选择
-但是B中添加后，若是A中没有要动态为A增加这项。
-```
+> 有一个国家列表，现在要将国家列表放到A中，然后B可以由A选择，也可以有总列表选择
+  但是B中添加后，若是A中没有要动态为A增加这项。
+
 原文见： http://www.cnblogs.com/yexiaochai/p/3523219.html
 
 尝试做一下， 代码：
 
-```coffeescript
+~~~coffeescript
 # initialize app
 app              = {}
 
@@ -90,7 +89,7 @@ window.app = app
 $ ->
   c = new app.controllers.CountryController
   c.createCountries().showViews()
-```
+~~~
 
 为了保持简洁，使用coffeescript，功能只实现了添加到B的部分，事件对象就只extend了一个backbone.event。
 
