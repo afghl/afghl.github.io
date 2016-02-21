@@ -100,7 +100,7 @@ Turbolinks 可说是[pjax](https://github.com/defunkt/jquery-pjax)的一种实�
 
 3. **replace**
 
-    来到最坑的最后一步，替换body。替换DOM本身很简单，麻烦的是javascript执行。Turbolinks本身使用Pjax技术，导致document对象的事件和普通跳转时不同了，依赖这些事件的js方法都会影响。另外，直接写在<script>里面的js代码，也会有意想不到的情况发生。
+    来到最坑的最后一步，替换body。替换DOM本身很简单，麻烦的是javascript执行。Turbolinks本身使用Pjax技术，导致document对象的事件和普通跳转时不同了，依赖这些事件的js方法都会影响。另外，直接写在`<script>`里面的js代码，也会有意想不到的情况发生。
 
     关于Evaluating script tags，看看官方document：
 
