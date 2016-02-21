@@ -2,7 +2,6 @@
 layout: post
 title:  "说说“表现与数据分离”"
 date:   2015-06-21 22:24:00 +0800
-categories: javascript front-end
 ---
 
 先看一道面试题：

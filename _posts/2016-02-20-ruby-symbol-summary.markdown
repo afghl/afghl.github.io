@@ -2,7 +2,6 @@
 layout: post
 title:  "Ruby Symbol 知识整理"
 date:   2016-02-20 16:07:00 +0800
-categories: ruby
 ---
 
 入门的时候被Ruby里的Symbol有点弄晕。现在整理一下关于 Ruby Symbol 的知识，写篇文章。
