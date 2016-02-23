@@ -173,7 +173,8 @@ blockquote {
  */
 pre,
 code {
-    font-size: 15px;
+    font-family: Menlo, Consolas, "Courier New", Courier, "Liberation Mono", monospace;
+    font-size: 14px;
     border-radius: 3px;
     background-color: $grey-color-light;
 }
@@ -227,4 +228,15 @@ pre {
         display: table;
         clear: both;
     }
+}
+
+// edit post list h2 tag
+
+.post-list {
+  h2 {
+    margin-bottom: 5px;
+    a {
+      font-size: 34px;
+    }
+  }
 }
