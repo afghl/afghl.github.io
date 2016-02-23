@@ -18,6 +18,4 @@ twitter_username: jekyllrb
 github_username:  jekyll
 
 # Build settings
-
-# use default markdown engine
-# markdown: redcarpet
+highlighter: rouge
