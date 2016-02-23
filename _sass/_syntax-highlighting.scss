@@ -5,6 +5,11 @@
     background: #ddd;
     @extend %vertical-rhythm;
 
+    code {
+      font-family: Menlo, Consolas, "Courier New", Courier, "Liberation Mono", monospace;
+      font-size: 14px;
+    }
+
     .c     { color: #998; font-style: italic } // Comment
     .err   { color: #a61717; background-color: #e3d2d2 } // Error
     .k     { font-weight: bold } // Keyword
