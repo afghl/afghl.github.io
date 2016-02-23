@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Turbolinks 源码分析 - 前端篇"
-date:   2016-02-20 16:07:00 +0800
+date:   2016-02-21 16:07:00 +0800
 ---
 
 在半年前的一个项目中，遇到Rails 4的大坑之一：Turbolinks，所以花一点时间好好的研究了这个gem。近来有时间整理一下写下来。本文成文时，[Turbolinks 5 preview](https://github.com/turbolinks/turbolinks) 已经出了，并支持iOS 和 Andrid hybrid apps。本文的源码指的是[Turbolinks Classic](https://github.com/turbolinks/turbolinks-classic)，权当复习。
