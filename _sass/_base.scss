@@ -103,7 +103,9 @@ ul, ol {
 }
 
 li {
-    > ul,
+    > ul {
+         margin-bottom: 15px;
+    }
     > ol {
          margin-bottom: 0;
     }
