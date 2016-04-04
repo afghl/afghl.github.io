@@ -116,7 +116,6 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
 2. 在旋转结点的同时，用一个位记录taller值，在递归的时候回溯此值，并以此调节平衡因子：
    
    ~~~ C
-    // 返回值为是否插入了新节点。
     Status insertAVL(TreePtr *tree, ElementType element, Status *taller) { // taller的做法是多次传递同一个int变量时， 用指针。
       // 插入新节点
       if (! *tree) {
@@ -144,13 +143,11 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
           printf("\n---------taller----------\n");
           printf("节点：%d， 调整前bf：%d\n", (*tree)->element, (*tree)->bf);
           switch ((*tree)->bf) {
-            // 原来是左子树较深， 插在了左， 所以要转。
             case 1:
               leftBalance(tree);
               // 转完后高度已经调整了。
               *taller = FALSE;
               break;
-            // 原来平衡， 插在了左， 不用转， 但要调整自己的bf。
             case 0:
               (*tree)->bf = 1;
               *taller = TRUE;
@@ -228,10 +225,9 @@ ElementType deleteMax(MaxHeap h) {
   tmp = h->elements[h->size];
   h->size = h->size - 1;
 
-  // 拿最后一个元素替补当前根节点， 然后与下面的左右儿子比较， 找到该元素合适的位置。
   while(1) {
     h->elements[index] = tmp;
-    // 找到左右两儿子的较大者
+    // 找到左右child的较大者
     if(h->elements[index * 2] > h->elements[index * 2 + 1]) {
       maxChildIndex = index * 2;
     } else {
