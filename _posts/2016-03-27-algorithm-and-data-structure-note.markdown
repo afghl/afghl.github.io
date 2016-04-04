@@ -12,7 +12,7 @@ date:   2016-03-19 20:11:00 +0800
 
 一般都会用链表实现一棵二叉树结构。
 
-~~~ coffee
+~~~ c
 typedef struct TreeNode {
     ElementType element;
     struct TreeNode * left;
@@ -82,7 +82,7 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
 
 主要算法在于：
 
-   1. 旋转不平衡节点：下以左旋为例。
+1. 旋转不平衡节点：下以左旋为例。
    
    ~~~ C
     void leftBalance (TreePtr *tree) {
@@ -113,7 +113,7 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
     }
    ~~~
 
-   2. 在旋转结点的同时，用一个位记录taller值，在递归的时候回溯此值，并以此调节平衡因子：
+2. 在旋转结点的同时，用一个位记录taller值，在递归的时候回溯此值，并以此调节平衡因子：
    
    ~~~ C
     // 返回值为是否插入了新节点。
