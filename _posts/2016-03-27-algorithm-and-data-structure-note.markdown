@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "数据结构和算法笔记（C语言）"
-date:   2016-03-19 20:11:00 +0800
+date:   2016-03-27 20:11:00 +0800
 ---
 
 近来学习数据结构和算法，还有一点C语言。做点笔记，持续更新。
@@ -83,7 +83,7 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
 主要算法在于：
 
 1. 旋转不平衡节点：下以左旋为例。
-   
+
    ~~~ C
     void leftBalance (TreePtr *tree) {
       TreePtr subRightChild;
@@ -114,7 +114,7 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
    ~~~
 
 2. 在旋转结点的同时，用一个位记录taller值，在递归的时候回溯此值，并以此调节平衡因子：
-   
+
    ~~~ C
     Status insertAVL(TreePtr *tree, ElementType element, Status *taller) { // taller的做法是多次传递同一个int变量时， 用指针。
       // 插入新节点
@@ -132,13 +132,13 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
         *taller = FALSE;
         return FALSE;
       }
-    
+
       if (element < (*tree)->element) {
         // 递归插入
         if(!insertAVL(&(*tree)->left, element, taller)) return FALSE;
         // 插在了 tree的左节点上。
         // 现检查tree的bf，并根据bf调整旋转tree，改taller。
-    
+
         if(*taller) {
           printf("\n---------taller----------\n");
           printf("节点：%d， 调整前bf：%d\n", (*tree)->element, (*tree)->bf);
@@ -183,7 +183,7 @@ int isomorphic(TreePtr tree1, TreePtr tree2) {
       return TRUE;
     }
    ~~~
-   
+
 ### 最大堆
 
 最大堆最重要的接口为`deleteMax`，需要将最大值作为树的根节点，常用数组实现，数据结构：
