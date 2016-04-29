@@ -58,7 +58,7 @@ graphviz和它提供的dot语言是一套绘图DSL，但对这个一无所知并
 #### 使用graphviz绘图
 
 ~~~
-  dot post.dot -T png -o post.png
+  $ dot post.dot -T png -o post.png
 ~~~
 
 最后得到的，就是`Post.all`在arel中所生成的AST。
