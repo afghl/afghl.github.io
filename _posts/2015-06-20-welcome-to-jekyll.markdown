@@ -37,6 +37,23 @@ $$
 \end{align*}
 $$
 
+you can also use graphviz
+
+
+![Alt text](http://g.gravizo.com/g?
+  digraph G { aize ="4,4"; main [shape=box]; main -> parse [weight=8];
+    parse -> execute;
+    main -> cleanup;
+    execute -> { make_string; printf};
+    init -> make_string;
+    edge [color=red];
+    main -> printf [style=bold,label="100 times"];
+    make_string [label="make a string"];
+    node [shape=box,style=filled,color=".7 .3 1.0"];
+    execute -> compare;
+  }
+)
+
 Check out the [Jekyll docs][jekyll-docs] for more info on how to get the most out of Jekyll. File all bugs/feature requests at [Jekyll’s GitHub repo][jekyll-gh]. If you have questions, you can ask them on [Jekyll Talk][jekyll-talk].
 
 [jekyll-docs]: http://jekyllrb.com/docs/home
