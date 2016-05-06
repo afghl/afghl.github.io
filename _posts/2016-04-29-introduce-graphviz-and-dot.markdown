@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "利用Graphviz看ActiveRecod源码"
-date:   2016-04-09 12:11:00 +0800
+date:   2016-04-29 12:11:00 +0800
 ---
 
 我们都知道ActiveRecod借助Arel管理Sql的生成，而Arel使用ast和visitor pattern生成Sql。但是当你想看这颗语法树时，可能会很郁闷：
