@@ -1,0 +1,33 @@
+digraph structs {
+    node [shape=plaintext];
+next [label="Student", shape=plaintext]
+
+    struct1 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+    <TR>
+	    <TD width="40">id</TD>
+	    <TD width="90">name</TD>
+	    <td width="90">sex</td>
+	</TR>
+	<TR>
+	    <TD>1</TD>
+	   <TD>Jacky</TD>
+       <TD>girl</TD>
+	</TR>
+    <TR>
+        <TD>2</TD>
+       <TD>Anson</TD>
+       <TD>boy</TD>
+	</TR>
+    <TR>
+        <TD>3</TD>
+       <TD>Alicia</TD>
+       <TD>girl</TD>
+	</TR>
+        <TR>
+        <TD>4</TD>
+       <TD>John</TD>
+       <TD>boy</TD>
+	</TR>
+
+    </TABLE>>];
+}

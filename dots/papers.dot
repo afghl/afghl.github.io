@@ -1,0 +1,32 @@
+digraph papers {
+    node [shape=plaintext];
+next [label="Student", shape=plaintext]
+
+    struct1 [label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+    <TR>
+	    <TD width="40">id</TD>
+	    <TD width="90">student_id</TD>
+	    <td width="90">title</td>
+      <td width="90">score</td>
+	</TR>
+	<TR>
+	   <TD>1</TD>
+	   <TD>4</TD>
+     <TD>title_1</TD>
+     <TD>90</TD>
+	</TR>
+  <TR>
+     <TD>2</TD>
+     <TD>2</TD>
+     <TD>title_2</TD>
+     <TD>93</TD>
+  </TR>
+  <TR>
+  	   <TD>3</TD>
+  	   <TD>1</TD>
+       <TD>title_3</TD>
+       <TD>95</TD>
+  	</TR>
+
+    </TABLE>>];
+}
