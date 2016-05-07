@@ -6,8 +6,13 @@ date:   2016-05-06 12:11:00 +0800
 
 ### 前言
 
-介绍rails ActiveRecod的神奇， 任何方便的东西背后都包含大量的技术含量。 说说arel和关系代数的关系。Arel的github上。。关系代数是Arel的理论基础。先介绍关系代数，在本文末尾再说明为什么这是了解Arel的基础知识。
-这系列的备用知识  对rails有一定了解，对sql有一定了解。
+还记得初次接触Rails，在controller里使用`Post.all`从数据库里拉出一张表的数据出来时，那种惊叹和感动吗？
+
+如果你曾经写过DAO层，就知道ActiveRecord的实现是多么优雅。作为web最强框架，Rails提供了太多魔法一般的东西，Web App开发者能号称使用Rails 15分钟构建博客，是因为我们站在Rails厚重的一层封装上。任何优雅而便捷的框架背后都包含大量的技术含量。今天我们从ActiveRecord说起。
+
+ActiveRecord是Rails里MVC的M层，本系列文章只选择其一个侧面介绍 -- 调用Arel生成Sql语句。 Arel是一个SQL AST manager，ActiveRecord完全委托Arel管理Sql的生成，所以这个系列的标题，也可以说成是“ActiveRecord如何使用Arel拼出Sql？”。本系列假设你已对rails有一定了解，对sql有一定了解。
+
+Arel的[github主页](https://github.com/rails/arel)的描述是：A Relational Algebra，关系代数（Relational Algebra）是Arel的理论基础。要明白Arel是如何工作的，必须要了解基本的关系代数知识，如果你对此已经了解，可以跳过本文。
 
 ### 关系代数（Relational algebra）
 
@@ -194,7 +199,7 @@ $$ \pi_{name,paper}(students \bowtie_{students.id = papers.student_id} papers) $
 实际上，Arel生成Sql的步骤就是上文中将sql转换为关系运算表达式的 **逆过程**：
 
 - Arel的运行时内存，持有一棵语法树 -- 可以认为是关系运算表达式的树状形式。
-- 另一些类，通过观察这颗语法树，拼出Sql语句。
+- 另一些类，通过观察这棵语法树，拼出Sql语句。
 
 当你看不明白Arel在相关部分的实现时，请多想想relational algebra的内容。
 
