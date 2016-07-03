@@ -187,7 +187,7 @@ end
 
 （为了方便理解我省略了一些对参数的特殊处理。）可见`where!`方法中做了两件事：
 
-- 向`self.where_values`添加新的value。
+- 向`self.where_values`添加新的value。（这部分会在下文解释）
 - 返回`self`。
 
 实际上，其他大部分的query方法所做的事都是一样的：
@@ -224,8 +224,8 @@ end
 Post.where(title: 'hehe').order('id desc').limit(5)
 ~~~
 
-调用链将会是：
+从表面看，调用链将会是：
 
 ![Alt text](/images/method-chain.png)
 
-上图只是一个简单的示意图。接下来，详细看看所谓的`build_where`和`where_values`，到底是如何设计的。
+上图只是一个简单的示意图。在下一篇，我们会详细看看所谓的`build_where`和`where_values`，到底是如何设计的。
