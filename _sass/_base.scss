@@ -235,10 +235,14 @@ pre {
 // edit post list h2 tag
 
 .post-list {
-  h2 {
-    margin-bottom: 5px;
-    a {
-      font-size: 34px;
+    h2 {
+        margin-bottom: 5px;
+        a {
+            font-size: 34px;
+        }
     }
-  }
+}
+
+img {
+    max-width: 100%;
 }
