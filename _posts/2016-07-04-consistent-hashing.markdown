@@ -44,13 +44,13 @@ Hash(object) % 4
 
 考虑通常的Hash算法都是将value映射到一个32位的key值，也即是0 ~ 2 ^ 32 - 1次方的数值空间；我们可以将这个空间想象成一个首（0）尾（2 ^ 32 - 1）相接的圆环，如下图所示。
 
-![Alt](/images/consistent-hash(1).JPG)
+![Alt](/images/consistent-hash(1).jpg)
 
 #### 将object映射到环上
 
 比如有4个需要存储的object，先求出它们的hash值，根据hash值映射到环上。如图：
 
-![Alt](/images/consistent-hash(2).JPG)
+![Alt](/images/consistent-hash(2).jpg)
 
 #### 将cache映射到环上
 
@@ -90,7 +90,7 @@ hash算法的一个考量指标是平衡性。在本例中，我们希望每一�
 
 以仅部署cache A和cache C的情况为例，引入虚拟节点，cache A1, cache A2代表了cache A；cache C1，cache C2代表了cache C。
 
-![alt](/images/consistent-hash(4).JPG)
+![alt](/images/consistent-hash(4).jpg)
 
 此时，对象到“虚拟节点”的映射关系为：
 
@@ -100,4 +100,4 @@ objec1->cache A2；objec2->cache A1；objec3->cache C1；objec4->cache C2；
 
 虚拟节点技术实则是做了两次matching，如图：
 
-![alt](/images/consistent-hash(5).JPG)
+![alt](/images/consistent-hash(5).jpg)
