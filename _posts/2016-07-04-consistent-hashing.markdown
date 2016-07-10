@@ -50,7 +50,7 @@ Hash(object) % 4
 
 比如有4个需要存储的object，先求出它们的hash值，根据hash值映射到环上。如图：
 
-![Alt](/images/consistent-hash(2).jpg)
+![Alt](/images/consistent-hash(2).JPG)
 
 #### 将cache映射到环上
 
