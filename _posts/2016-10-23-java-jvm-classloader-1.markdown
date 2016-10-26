@@ -61,7 +61,7 @@ Java在刚刚诞生的时候提出一个非常著名的宣传口号“Write Once
 - JVM在运行期间把.class文件加载到内存，并对数据进行校验，转换，和初始化的过程就是类加载机制。
 - classloader就是实现这套机制的一系列类。
 
-下一篇，说说类加载的几个阶段。
+下一篇，说说类加载的工作机制。
 
 ### 参考资源
   - JVM (Java Virtual Machine) Introduction (https://www.youtube.com/watch?v=G1ubVOl9IBw)
