@@ -18,7 +18,11 @@ struct LNode {
 };
 ~~~
 
-而在ArrayList里，同样有ElementData和size两个实例变量，通过两个基本变量来实现可动态变容的数组的。（在构造器处看看这两个变量）下面我们看看ArrayList一些常见接口和内部实现。
+而在ArrayList里，同样有ElementData和size两个实例变量，通过两个基本变量来实现可动态变容的数组的。
+
+（在构造器处看看这两个变量）
+
+下面我们看看ArrayList一些常见接口和内部实现。
 
 #### 添加
 
