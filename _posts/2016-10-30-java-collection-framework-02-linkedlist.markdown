@@ -101,7 +101,7 @@ for loop, time spent: 5550ms
 foreach loop, time spent: 9ms
 ~~~
 
-普通for循环速度之慢令人咋舌。其实思考一下很容易得到原因：就是上文提到的链表的特性，通过index来访问元素需要把之前的元素都访问一遍。LinkedList里`get`方法的实现：
+普通for循环速度之慢令人咋舌。其实思考一下很容易得到原因，就是上文提到的链表的特性：通过index来访问链表的元素，需要把之前的元素都访问一遍。LinkedList里`get`方法的实现：
 
 ~~~ java
 public E get(int index) {
