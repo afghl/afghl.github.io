@@ -57,3 +57,93 @@ ArrayList提供get和indexOf接口，允许返回指定下标的元素和搜索�
 #### 扩容
 
 ArrayList比数组好用的最重要原因就是：数组的大小是不可变的，而ArrayList是可扩容的。而这个扩容对客户来说是透明的，它发生在add操作内，也就是刚才看到的`ensureCapacityInternal`，现在重点来说一说它：
+
+虽说ArrayList的扩容对客户而言是透明的，但它依然提供接口：`ensureCapacity`，提供手动扩容的功能：
+
+~~~ java
+public void ensureCapacity(int minCapacity) {
+    int minExpand = (elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
+        // any size if not default element table
+        ? 0
+        // larger than default for default empty table. It's already
+        // supposed to be at default size.
+        : DEFAULT_CAPACITY;
+
+    if (minCapacity > minExpand) {
+        ensureExplicitCapacity(minCapacity);
+    }
+}
+
+~~~
+
+在实现里，实际调用的是`grow`方法：
+
+~~~ java
+private void ensureExplicitCapacity(int minCapacity) {
+    modCount++;
+
+    // overflow-conscious code
+    if (minCapacity - elementData.length > 0)
+        grow(minCapacity);
+}
+
+private void grow(int minCapacity) {
+    // overflow-conscious code
+    int oldCapacity = elementData.length;
+    int newCapacity = oldCapacity + (oldCapacity >> 1);
+    if (newCapacity - minCapacity < 0)
+        newCapacity = minCapacity;
+    if (newCapacity - MAX_ARRAY_SIZE > 0)
+        newCapacity = hugeCapacity(minCapacity);
+    // minCapacity is usually close to size, so this is a win:
+    elementData = Arrays.copyOf(elementData, newCapacity);
+}
+
+~~~
+
+重点是grow方法的第二行：`>>`是向右移位操作符，得到的结果是原操作数除以二的值。整个表达式（`oldCapacity + (oldCapacity >> 1)`）的值约为oldCapacity的1.5倍。
+
+在1.8之前的版本，这一行运算是写成`int newCapacity = (oldCapacity * 3)/2 + 1;`，旧的算法增长的更快。无论新旧算法，`capacity`的增长都是指数级的，简单做个实验：
+
+~~~ java
+public static void main(String[] args) {
+    int a = 10;
+    int count = 0;
+    while ((a = grow(a)) < Integer.MAX_VALUE && a > 0) {
+        count++;
+        System.out.println(a);
+    }
+    System.out.println(count);
+}
+
+private static int grow(int capacity) {
+    return capacity + (capacity >> 1);
+}
+~~~
+
+需要grow多少次呢？
+
+~~~
+15
+22
+33
+49
+73
+109
+163
+244
+366
+549
+823
+....
+354836040
+532254060
+798381090
+1197571635
+1796357452
+48
+~~~
+
+48次，你应该对这个算法有个感性的认识了。所以扩容扩多少，是JDK开发人员在时间、空间上做的一个权衡，提供出来的一个比较合理的数值。
+
+增加了容量之后，最后是调用`Array.copyOf`复制到新数组。
