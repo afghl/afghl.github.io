@@ -147,6 +147,26 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 
 ~~~
 
+其中，重点是转换为红黑树数据结构的一段：
+
+~~~ java
+for (int binCount = 0; ; ++binCount) {
+    if ((e = p.next) == null) {
+        p.next = newNode(hash, key, value, null);
+        // binCount为统计链表里节点数，当链表长度大于8时，转换为红黑树并处理
+        if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+            treeifyBin(tab, hash);
+        break;
+    }
+}
+~~~
+
+这里当链表长度大于8时，会调用`treeifyBin`方法：将Node逐个转为TreeNode，并调整结点之间的层次结构。
+
+### 扩容机制
+
+
+
 ### 参考资源
 
 - http://tech.meituan.com/java-hashmap.html
