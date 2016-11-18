@@ -126,4 +126,6 @@ Node<E> node(int index) {
 }
 ~~~
 
+这里有个小小的优化：LinkedList的`get(index)`并不一定从链表头开始查找，会先将index与长度size的一半比较，如果index<size/2，就只从位置0往后遍历到位置index处，而如果index>size/2，就只从位置size往前遍历到位置index处。这样可以减少一部分不必要的遍历，从而提高一定的效率，但实际上每次get还是一个O(n)的操作。
+
 所以对于LinkedList，用访问下标的方法遍历它实在是非常痛苦。
