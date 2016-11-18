@@ -8,9 +8,7 @@ date:   2016-10-30 11:54:00 +0800
 
 首先看看Map接口定义的方法：
 
-~~~ java
-
-~~~
+![Alt](/images/hashmap(1).png)
 
 可看出，Map定义的就是一个“key-value键值对”的字典，它的用法不必赘言。HashTable实现了Map接口，它是使用一个哈希表实现的。
 
@@ -96,9 +94,35 @@ Entry实际上就是一个单向链表，它维护一个next指针。
 
 看到Entry的next指针，你应该已经想到了，没错，HashTable内部用“拉链法”处理冲突。先花一分钟，用一个图直观的讲解下拉链法的原理：
 
-图
+hashTable使用数组作为存储键值对的数据结构。那么每一对K-V值应该都有一个唯一、不变的在数组中的index，而且这个index应该是和KEY对应的。这样理想状态下的get方法的伪代码是：
 
-过程说一下，
+~~~ java
+public V get(Object k) {
+    return table[k.hashCode() % table.length].value;
+}
+~~~
+
+这个hashCode方法是客户负责实现的，它应该尽量随机。但是始终会出现一个问题：两个不同的key的hashCode一致，对应数组的index也一致，这就是hash冲突。
+
+拉链法解决冲突的方法是：
+
+![Alt](/images/hashtable(4).gif)
+
+这两个冲突的KEY用链表相连，链表头放在table数组中。查找时，找到index之后，还要比较key是否相等，如果不相等，会沿着next指针向下查找：
+
+~~~ java
+public synchronized V get(Object key) {
+    Entry<?,?> tab[] = table;
+    int hash = key.hashCode();
+    int index = (hash & 0x7FFFFFFF) % tab.length;
+    for (Entry<?,?> e = tab[index] ; e != null ; e = e.next) {
+        if ((e.hash == hash) && e.key.equals(key)) {
+            return (V)e.value;
+        }
+    }
+    return null;
+}
+~~~
 
 具体看一看HashTable相关代码，首先是`put`方法：
 
@@ -149,11 +173,10 @@ private void addEntry(int hash, K key, V value, int index) {
 
 ~~~
 
-讲解一下：
+讲解一下（rehash的代码下详）：
 
-1. 根据hashcode找到在table数组的位置。但不是马上插入的
-2. rehash的代码下详。
-3. 然后一步一步，插入到第一个中。
+1. 根据hashcode找到在table数组的位置。若找到Key相等的entry，说明这次put操作是更新。
+2. 如果找不到Key对应的entry，说明是插入新的K-V对，这时创建新entry，插入到链表头，并维护后继指针。
 
 `remove`方法可以看到相似的操作：
 
@@ -230,4 +253,4 @@ protected void rehash() {
 
 首先，rehash方法是protected的，说明客户不能手动rehash一个HashTable。
 
-一步步讲解下
+在jdk的hashTable实现中，rehash方法会把table扩容一倍。然后根据`loadFactor`计算新的`threshold`。然后遍历旧table，将所有entry迁移，是个O(table.length)的操作。
