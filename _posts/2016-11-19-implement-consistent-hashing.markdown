@@ -269,6 +269,8 @@ entry已失效: applepen
 
 大部分的缓存都没有失效！至此我们验证了当节点数量改变时，一致性hash能够使失效的缓存数量尽可能少。
 
+github: https://github.com/afghl/hashringdemo
+
 #### 参考
 
 - https://community.oracle.com/blogs/tomwhite/2007/11/27/consistent-hashing
