@@ -114,7 +114,7 @@ public class Main {
 
         c.addServer(new Server("192.168.0.6"));
 
-        findEnties(c, entries);
+        findEntries(c, entries);
 
     }
 
@@ -129,7 +129,7 @@ public class Main {
         return c;
     }
 
-    private static void findEnties(Cluster c, Entry[] entries) {
+    private static void findEntries(Cluster c, Entry[] entries) {
         for (Entry e : entries) {
             if (e == c.get(e)) {
                 System.out.println("重新找到了entry:" + e);
