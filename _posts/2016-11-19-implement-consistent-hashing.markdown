@@ -157,3 +157,112 @@ entry已失效: pineapplepen
 ~~~
 
 可见，在普通取余路由算法的实现，几乎所有的entry都会被映射到新的server中，大部分缓存都失效了。
+
+#### 实现consistent-hashing
+
+首先，为了servers和entries在hash环上足够分散，重写它们的hashCode方法，简单起见，复用String的hashCode算法：
+
+~~~ java
+public int hashCode() {
+    return name.hashCode();
+}
+~~~
+
+然后，就可以选择几个命名的服务器名字，确保它们不会集中在环上的某一段上。
+
+然后，在Cluster中，用SortMap存储servers：
+
+~~~ java
+public class Cluster {
+    private static final int SERVER_SIZE_MAX = 1024;
+
+    private SortedMap<Integer, Server> servers = new TreeMap<Integer, Server>();
+    private int size = 0;
+
+    public boolean addServer(Server s) {
+        if (size >= SERVER_SIZE_MAX)
+            return false;
+
+        servers.put(s.hashCode(), s);
+
+        size++;
+        return true;
+    }
+}
+~~~
+
+重写Cluster的routeServer方法：
+
+~~~ java
+public Server routeServer(int hash) {
+    if (servers.isEmpty())
+        return null;
+
+    if (!servers.containsKey(hash)) {
+        SortedMap<Integer, Server> tailMap = servers.tailMap(hash);
+        hash = tailMap.isEmpty() ? servers.firstKey() : tailMap.firstKey();
+    }
+    return servers.get(hash);
+}
+~~~
+
+这里传入的参数hash是entry的hashcode，根据entry的hashCode，向上找一个和它最接近的servers并返回。
+
+再测试一下这个一致性hash的表现：
+
+~~~ java
+public class Main {
+    public static void main(String[] args) {
+        Cluster c = createCluster();
+
+        Entry[] entries = {
+                    new Entry("i"),
+                    new Entry("have"),
+                    new Entry("a"),
+                    new Entry("pen"),
+                    new Entry("an"),
+                    new Entry("apple"),
+                    new Entry("applepen"),
+                    new Entry("pineapple"),
+                    new Entry("pineapplepen"),
+                    new Entry("PPAP")
+                };
+
+        for (Entry e : entries)
+            c.put(e);
+
+        c.addServer(new Server("1"));
+        findEntries(c, entries);
+
+    }
+
+    private static Cluster createCluster() {
+        Cluster c = new Cluster();
+        c.addServer(new Server("international"));
+        c.addServer(new Server("china"));
+        c.addServer(new Server("japan"));
+        c.addServer(new Server("Amarica"));
+        c.addServer(new Server("samsung"));
+        return c;
+    }
+
+    private static void findEntries(Cluster c, Entry[] entries) {
+        // omitted...
+    }
+}
+~~~
+
+结果：
+
+~~~ java
+重新找到了entry: i
+重新找到了entry: have
+重新找到了entry: a
+重新找到了entry: pen
+重新找到了entry: an
+重新找到了entry: apple
+entry已失效: applepen
+重新找到了entry: pineapple
+重新找到了entry: pineapplepen
+重新找到了entry: PPAP
+~~~
