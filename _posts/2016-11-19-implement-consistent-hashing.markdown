@@ -254,7 +254,7 @@ public class Main {
 
 结果：
 
-~~~ java
+~~~
 重新找到了entry: i
 重新找到了entry: have
 重新找到了entry: a
@@ -266,3 +266,9 @@ entry已失效: applepen
 重新找到了entry: pineapplepen
 重新找到了entry: PPAP
 ~~~
+
+大部分的缓存都没有失效！至此我们验证了当节点数量改变时，一致性hash能够使失效的缓存数量尽可能少。
+
+#### 参考
+
+- https://community.oracle.com/blogs/tomwhite/2007/11/27/consistent-hashing
