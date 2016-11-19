@@ -72,6 +72,7 @@ public class Hashtable<K,V>
 ~~~
 
 HashTable包括几个重要的成员变量：table, count, threshold, loadFactor, modCount。
+
 - table是一个Entry[]数组类型，存放每一对key-value的数组。
 - count是Hashtable的大小，它是Hashtable保存的键值对的数量。
 - threshold是Hashtable的阈值，用于判断是否需要调整Hashtable的容量。threshold的值="容量*加载因子"。
