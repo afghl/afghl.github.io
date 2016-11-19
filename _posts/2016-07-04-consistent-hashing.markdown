@@ -101,3 +101,5 @@ objec1->cache A2；objec2->cache A1；objec3->cache C1；objec4->cache C2；
 虚拟节点技术实则是做了两次matching，如图：
 
 ![alt](/images/consistent-hash(5).jpg)
+
+[实现篇](/2016/11/19/implement-consistent-hashing.html)
