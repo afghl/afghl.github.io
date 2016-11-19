@@ -103,7 +103,7 @@ public V get(Object k) {
 }
 ~~~
 
-这个hashCode方法是客户负责实现的，它应该尽量随机。但是始终会出现一个问题：两个不同的key的hashCode一致，对应数组的index也一致，这就是hash冲突。
+这个hashCode方法是客户负责实现的，它应该尽量随机。但是始终会出现一个问题：两个不同的key的hashCode不一致，但取余`table.length`后，对应数组的index一致，这就是hash冲突。
 
 拉链法解决冲突的方法是：
 
