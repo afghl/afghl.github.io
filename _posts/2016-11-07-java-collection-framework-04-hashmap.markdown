@@ -268,8 +268,6 @@ final Node<K,V>[] resize() {
 
     但在jdk1.8中做了优化，因为capacity总是扩展为原来的两倍，只需要看看原来的hash值新增的那个bit是1还是0就好了，是0的话索引没变，是1的话索引变成“原索引+oldCap”。具体原理这里就不展开了，你可以看看[这篇文章](http://tech.meituan.com/java-hashmap.html)。
 
-
-
 ### 参考资源
 
 - http://tech.meituan.com/java-hashmap.html
