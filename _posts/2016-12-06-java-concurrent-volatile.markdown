@@ -69,7 +69,7 @@ class VolatileExample {
 
 看程序的意思，很显然，我们希望保证在跨线程执行`reader`方法时，`i`能读取到`a`为1的值。也就是1操作happens-before 4操作。
 
-这里，如果没有足够的同步机制，是不可能做到的。而我们volatile关键字带来的同步来轻松实现，可以想想这四个操作直接的happens-before关系：
+这里，如果没有足够的同步机制，是不可能做到的。而我们volatile关键字带来的同步来轻松实现，可以想想这四个操作之间的happens-before关系：
 
 1. 根据程序次序规则，1 happens before 2; 3 happens before 4。
 2. 根据volatile规则，2 happens before 3。
