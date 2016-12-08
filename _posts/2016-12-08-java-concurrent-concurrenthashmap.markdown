@@ -140,9 +140,11 @@ ConcurrentHashMap是没有足够的同步保证在这种情况下的正确性的
 
 ### 跨segments的操作
 
-
+pending...
 
 ### 参考
 
 - http://ifeve.com/java-concurrent-hashmap-2/
 - http://ifeve.com/concurrenthashmap/
+- http://www.iteye.com/topic/344876
+- http://www.ibm.com/developerworks/java/library/j-jtp08223/
