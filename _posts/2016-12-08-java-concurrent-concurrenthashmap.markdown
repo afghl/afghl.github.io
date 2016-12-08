@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "从JMM层面说说Java并发（二） - ConcurrentHashmap"
+title:  "从JMM层面说说Java并发（二） - ConcurrentHashmap（JDK1.6）"
 date:   2016-12-08 18:26:00 +0800
 ---
 
-ConcurrentHashMap是JDK提供的一个线程安全的Map实现，下面，我们分析一下它的实现和思路。
+ConcurrentHashMap是JDK提供的一个线程安全的Map实现。在JDK1.6中，它使用锁分离和Segment的方法实现更小粒度的锁。而在JDK1.8版本中，ConcurrentHashMap基本放弃了这一做法，而是使用CAS算法实现。本文分析的是JDK1.6版本中的实现。
 
 ### HashTable的问题
 
@@ -15,6 +15,19 @@ ConcurrentHashMap是JDK提供的一个线程安全的Map实现，下面，我们
 HashTable容器在竞争激烈的并发环境下表现出效率低下的原因，是因为所有访问HashTable的线程都必须竞争同一把锁。所以，一个优化思路是：**调整内部数据结构，从而允许容器里有多个锁**，每一把锁用于锁容器其中一部分数据，那么当多线程访问容器里不同数据段的数据时，线程间就不会存在锁竞争，从而可以有效的提高并发访问效率。这就是ConcurrentHashmap使用的锁分段技术。
 
 ### 数据结构的调整
+
+先复习一下HashTable的数据结构，是一个典型的哈希表实现：
+
+- 使用数组存储Entry
+- 使用拉链法解决哈希冲突
+
+一个HashMap的数据结构看起来类似下图：
+
+![Alt](/images/hashtable(4).gif)
+
+也是因为这样的数据结构，HashTable只能有一个锁。
+
+ConcurrentHashmap使用一个种粒度更细的加锁机制来实现高性能，看看ConcurrentHashmap的解决方法：
 
 
 
