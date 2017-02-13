@@ -256,7 +256,7 @@ final Node<K,V>[] resize() {
 2. 然后把`oldTab`的元素逐个迁移到newTab里。
 3. 对于以链表结构排列的entries，这里的迁移很有意思。在jdk 1.7中，是需要重新计算e.hash和newCapacity，以计算新的index的：
 
-    ~~~ java
+   ~~~ java
     do {
         Entry<K,V> next = e.next;
         int i = indexFor(e.hash, newCapacity); //！！重新计算每个元素在数组中的位置
@@ -264,7 +264,7 @@ final Node<K,V>[] resize() {
         newTable[i] = e;
         e = next;
     } while (e != null);
-    ~~~
+   ~~~
 
     但在jdk1.8中做了优化，因为capacity总是扩展为原来的两倍，只需要看看原来的hash值新增的那个bit是1还是0就好了，是0的话索引没变，是1的话索引变成“原索引+oldCap”。具体原理这里就不展开了，你可以看看[这篇文章](http://tech.meituan.com/java-hashmap.html)。
 
