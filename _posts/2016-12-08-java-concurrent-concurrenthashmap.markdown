@@ -126,9 +126,9 @@ value也是volatile变量，利用volatile的同步能保证其他线程value的
 
 这种情况应当很罕见，这其实是出现了和DCL一样的结果：如果这是不加同步的就返回value，那么有可能返回一个状态未完全处理好的对象。
 
-完全的理解了这个并发问题出现的原因，就能看懂这里的实现了：首先，为什么要判断：`v != null`？因为put方法里是不允许放入value为Null的键值对的。
+完全的理解了这个并发问题出现的原因，就能看懂这里的实现了：首先，明明put方法里是不允许放入value为Null的键值对的，为什么要判断：`v != null`呢？
 
-所以，这里出现v为空的情况只可能有一种：put线程执行`new HashEntry(K k , V v, HashEntry next)`的结果对于get线程尚未完全可见。这时，调用`readValueUnderLock`，则采用加锁的方式再次get。这时，读锁使用的是写锁，所以结果是可见的。
+这里出现v为空的情况只可能有一种：put线程执行`new HashEntry(K k , V v, HashEntry next)`的结果对于get线程尚未完全可见。这时，调用`readValueUnderLock`，则采用加锁的方式再次get。这时，读锁使用的是写锁，所以结果是可见的。
 
 #### 3. 另一个线程删除了这个entry
 
