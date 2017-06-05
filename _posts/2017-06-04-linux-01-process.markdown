@@ -29,7 +29,7 @@ date:   2017-06-04 23:36:00 +0800
 
 用me用户创建一个vi进程，它的uid就是me的uid：
 
-~~~
+~~~ shell
 e@iZ94rxjfu2hZ:/home/you$ id
 uid=1000(me) gid=1001(me) groups=1001(me),1000(admin)
 
@@ -42,7 +42,7 @@ me@iZ94rxjfu2hZ:/home/you$ ps -l | grep 22644
 
 换个用户创建，就是该用户的uid：
 
-~~~
+~~~ shell
 me@iZ94rxjfu2hZ:/home/you$ su you
 Password:
 
@@ -56,15 +56,83 @@ you@iZ94rxjfu2hZ:~$ ps -l | grep 22671
 0 T  1001 22671 22653  0  80   0 - 10266 signal pts/2    00:00:00 vi
 ~~~
 
-注意：用sudo创建一个进程，UID会变成root：
+注意：用sudo创建一个进程，UID会变成root的UID：
 
-~~~
+~~~ shell
 you@iZ94rxjfu2hZ:~$ sudo vi test &
 [2] 22680
 
 you@iZ94rxjfu2hZ:~$ ps -aux | grep 22680
 root     22680  0.0  0.0  65160  2020 pts/2    T    00:40   0:00 sudo vi test
 ~~~
+
+### 查看进程属性的指令
+
+有了以上的基础知识，来看看查看进程属性的指令。
+
+#### ps
+
+ps是最基础的查看进程的命令。它可以列出正在运行的进程，看看它的参数：
+
+- -A 列出所有的进程。
+- -a 列出不与terminal相关的进程。
+- -u 有效使用者相关的进程。
+- x 列出较齐全的信息。
+- l 列出更多信息。
+
+普通的ps指令只提供很少的信息，一般会用这两个命令：
+
+1. `ps -l`：列出当前shell上下文的进程，并且用详细格式打印。
+2. `ps aux`：观察系统所有进程。
+3. `ps -ef`：观察系统的所有进程。列出PPID，C这些字段。
+
+`ps -l`的示例：
+
+~~~ shell
+me@iZ94rxjfu2hZ:~$ ps -l | head -n2
+F S   UID   PID  PPID  C PRI  NI ADDR SZ WCHAN  TTY          TIME CMD
+0 S  1000 29946 29945  1  80   0 -  5691 wait   pts/2    00:00:00 bash
+~~~
+
+看看它的列：
+
+- F：代表這個程序旗標 (process flags)，說明這個程序的總結權限，常見號碼有：
+   - 若為 4 表示此程序的權限為 root；
+   - 若為 1 則表示此子程序僅進行複製(fork)而沒有實際執行(exec)。
+- S：代表這個程序的狀態 (STAT)，主要的狀態有：
+   - R (Running)：該程式正在運作中；
+   - S (Sleep)：該程式目前正在睡眠狀態(idle)，但可以被喚醒(signal)。
+   - D ：不可被喚醒的睡眠狀態，通常這支程式可能在等待 I/O 的情況(ex>列印)
+   - T ：停止狀態(stop)，可能是在工作控制(背景暫停)或除錯 (traced) 狀態；
+   - Z (Zombie)：僵屍狀態，程序已經終止但卻無法被移除至記憶體外。
+- UID/PID/PPID：代表『此程序被該 UID 所擁有/程序的 PID 號碼/此程序的父程序 PID 號碼』
+- C：代表 CPU 使用率，單位為百分比；
+- PRI/NI：Priority/Nice 的縮寫，代表此程序被 CPU 所執行的優先順序，數值越小代表該程序越快被 CPU 執行。
+- ADDR：ADDR 是 kernel function，指出該程序在記憶體的哪個部分，如果是個 running 的程序，一般就會顯示『 - 』。
+- SZ：进程用了多少内存。
+- WCHAN：表示目前程序是否運作中，同樣的， 若為 - 表示正在運作中。
+- TTY：登入者的終端機位置，若為遠端登入則使用動態終端介面 (pts/n)；
+- TIME：使用掉的 CPU 時間，注意，是此程序實際花費 CPU 運作的時間，而不是系統時間；
+- CMD：就是 command 的縮寫，造成此程序的觸發程式之指令為何。
+
+`ps aux`的示例：
+
+~~~ shell
+me@iZ94rxjfu2hZ:~$ ps aux | head -n2
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.1  33372  2620 ?        Ss   Feb14   0:01 /sbin/init
+~~~
+
+只说明几个不明显的列：
+
+- VSZ：该进程占用的虚拟内存数（Kb）。
+- RSS：该进程占用的实际内存数（Kb）。
+- STAT：同`ps -l`的S列。
+- TTY：該 process 是在那個終端機上面運作，若與終端機無關則顯示 ?，另外， tty1-tty6 是本機上面的登入者程序，若為 pts/0 等等的，則表示為由網路連接進主機的程序。
+
+#### top
+
+
 
 ### 参考
 
