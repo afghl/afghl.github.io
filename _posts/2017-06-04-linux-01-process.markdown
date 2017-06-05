@@ -132,7 +132,87 @@ root         1  0.0  0.1  33372  2620 ?        Ss   Feb14   0:01 /sbin/init
 
 #### top
 
+top相当于动态的、交互式的ps。它的可用选项比较少，在top界面里能用的指令较多：
 
+- -p：选择某个PID。
+- -d：选择间隔(秒)。
+
+先看看它的界面：
+
+~~~ shell
+me@iZ94rxjfu2hZ:~$ top
+top - 23:42:35 up 111 days, 14:01,  1 user,  load average: 0.01, 0.02, 0.05
+Tasks: 114 total,   2 running, 112 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.7 us,  0.3 sy,  0.0 ni, 99.0 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+KiB Mem:   2048464 total,  1723624 used,   324840 free,   142288 buffers
+KiB Swap:        0 total,        0 used,        0 free.   576324 cached Mem
+
+  PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND
+ 1390 me        20   0 2432992 143960  11520 S  0.7  7.0 104:29.14 java
+  939 root      20   0 1952944  72508   8072 S  0.3  3.5 896:23.63 java
+    1 root      20   0   33372   2620   1368 S  0.0  0.1   0:01.20 init
+~~~
+
+看前六行：
+
+- 第一行(top...)：這一行顯示的資訊分別為：
+    - 目前的時間，亦即是 00:53:59 那個項目；
+    - 開機到目前為止所經過的時間，亦即是 up 6:07, 那個項目；
+    - 已經登入系統的使用者人數，亦即是 3 users, 項目；
+    - 系統在 1, 5, 15 分鐘的平均工作負載。我們在第十五章談到的 batch 工作方式為負載小於 0.8 就是這個負載囉！代表的是 1, 5, 15 分鐘，系統平均要負責運作幾個程序(工作)的意思。 越小代表系統越閒置，若高於 1 得要注意你的系統程序是否太過繁複了！
+
+- 第二行(Tasks...)：顯示的是目前程序的總量與個別程序在什麼狀態(running, sleeping, stopped, zombie)。 比較需要注意的是最後的 zombie 那個數值，如果不是 0 ！好好看看到底是那個 process 變成僵屍了吧？
+
+- 第三行(%Cpus...)：顯示的是 CPU 的整體負載，每個項目可使用 ? 查閱。需要特別注意的是 wa 項目，那個項目代表的是 I/O wait， 通常你的系統會變慢都是 I/O 產生的問題比較大！因此這裡得要注意這個項目耗用 CPU 的資源喔！ 另外，如果是多核心的設備，可以按下數字鍵『1』來切換成不同 CPU 的負載率。
+
+- 第四行與第五行：表示目前的實體記憶體與虛擬記憶體 (Mem/Swap) 的使用情況。 再次重申，要注意的是 swap 的使用量要盡量的少！如果 swap 被用的很大量，表示系統的實體記憶體實在不足！
+
+- 第六行：這個是當在 top 程式當中輸入指令時，顯示狀態的地方。
+
+在top里可以输入指令进行交互：
+
+- ? ：顯示在 top 當中可以輸入的按鍵指令；
+- P ：以 CPU 的使用資源排序顯示；
+- M ：以 Memory 的使用資源排序顯示；
+- N ：以 PID 來排序喔！
+- T ：由該 Process 使用的 CPU 時間累積 (TIME+) 排序。
+- k ：給予某個 PID 一個訊號  (signal)
+- r ：給予某個 PID 重新制訂一個 nice 值。
+- q ：離開 top 軟體的按鍵。
+
+#### pstree
+
+pstree可以将系统的进程用树状形式展示，几个选项：
+
+- -A  ：各程序樹之間的連接以 ASCII 字元來連接；
+- -U  ：各程序樹之間的連接以萬國碼的字元來連接。在某些終端介面下可能會有錯誤；
+- -p  ：並同時列出每個 process 的 PID；
+- -u  ：並同時列出每個 process 的所屬帳號名稱。
+
+示例：
+
+~~~ shell
+me@iZ94rxjfu2hZ:~$ pstree -U
+init─┬─AliYunDun───12*[{AliYunDun}]
+     ├─AliYunDunUpdate───3*[{AliYunDunUpdate}]
+     ├─atop
+     ├─cron
+     ├─dbus-daemon
+     ├─6*[getty]
+     ├─gshelld───3*[{gshelld}]
+     ├─java─┬─java───29*[{java}]
+     │      └─10*[{java}]
+     ├─multipathd───5*[{multipathd}]
+     ├─nginx───2*[nginx]
+     ├─2*[npm─┬─sh───node───9*[{node}]]
+     │        └─9*[{npm}]]
+     ├─nscd───7*[{nscd}]
+     ├─ntpd
+     ├─rsyslogd───3*[{rsyslogd}]
+     ├─sshd───sshd───sshd───bash───pstree
+~~~
+
+其中，`3*[{gshelld}]`表示有3个gshelld的子进程。`├─sshd───sshd───sshd───bash───pstree`表示pstree是在bash下执行命令fork出来的！
 
 ### 参考
 
