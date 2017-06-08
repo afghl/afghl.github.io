@@ -139,27 +139,6 @@ me@iZ94rxjfu2hZ:~$ pidof java
 1458 1390 939
 ~~~
 
-#### lsof
-
-lsof ：列出被程序所開啟的文件名，它的参数是：
-
-- -a  ：多項資料需要『同時成立』才顯示出結果時，相当于and。
-- -U  ：僅列出 Unix like 系統的 socket 檔案類型；
-- -u  ：後面接 username，列出該使用者相關程序所開啟的檔案；
-- +d  ：後面接目錄，亦即找出某個目錄底下已經被開啟的檔案！
-
-示例：
-
-列出me用户下的进程使用的文件：
-
-~~~ shell
-me@iZ94rxjfu2hZ:~$ lsof -u me| head -n 2
-COMMAND   PID USER   FD      TYPE             DEVICE SIZE/OFF     NODE NAME
-java     1390   me  cwd       DIR              202,1     4096   527145 /home/me/repos/moments
-~~~
-
-FD、TYPE、DEVICE、NODE这几栏的意义不详，待补充。
-
 #### top
 
 top相当于动态的、交互式的ps。它的可用选项比较少，在top界面里能用的指令较多：
