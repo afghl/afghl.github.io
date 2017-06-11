@@ -100,7 +100,55 @@ udp6       0      0 [::]:ntp                [::]:*                              
 
 #### vmstat
 
+vmstat：查看机器的输入输出变化，这些输入输出主要有几部分：
 
+1. CPU
+2. 内存
+3. 硬盘
+
+看看各项都是怎么呈现的：
+
+~~~
+me@iZ94rxjfu2hZ:~$ vmstat
+procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 3  0      0 542860 136728 381760    0    0     0     6    4    4  1  1 98  0  0
+~~~
+
+- procs：进程数。r ：等待運作中的程序數量；b：不可被喚醒的程序數量。這兩個項目越多，代表系統越忙碌。
+- memory：顾名思义，内存情况。swpd：虛擬記憶體被使用的容量； free：未被使用的記憶體容量； buff：用於緩衝記憶體； cache：用於快取記憶體。
+- swap：内存使用swap的IO。si：由磁碟中將程序取出的量； so：由於記憶體不足而將沒用到的程序寫入到磁碟的 swap 的容量。 如果 si/so 的數值太大，表示記憶體內的資料常常得在磁碟與主記憶體之間傳來傳去，系統效能會很差！如果si、so不是一直为0，那说明性能已经出现问题！
+- io：磁盘io。
+- system：in：每秒被中斷的程序次數； cs：每秒鐘進行的事件切換次數；這兩個數值越大，代表系統與周邊設備的溝通非常頻繁！ 這些周邊設備當然包括磁碟、網路卡、時間鐘等。
+- cpu：CPU 的項目分別為：
+us：非核心層的 CPU 使用狀態； sy：核心層所使用的 CPU 狀態； id：閒置的狀態； wa：等待 I/O 所耗費的 CPU 狀態； st：被虛擬機器 (virtual machine) 所盜用的 CPU 使用狀態 (2.6.11 以後才支援)。
+
+#### iostat
+
+iostat：主要用于监控系统设备的IO负载情况（主要是磁盘），iostat首次运行时显示自系统启动开始的各项统计信息，之后运行iostat将显示自上次运行该命令以后的统计信息。
+
+~~~
+me@iZ94rxjfu2hZ:~$ iostat
+Linux 3.13.0-32-generic (iZ94rxjfu2hZ) 	06/11/2017 	_x86_64_	(1 CPU)
+
+avg-cpu:  %user   %nice %system %iowait  %steal   %idle
+           0.80    0.00    0.63    0.08    0.13   98.36
+
+Device:            tps    kB_read/s    kB_wrtn/s    kB_read    kB_wrtn
+xvda              0.57         0.11         5.68    1082365   57503280
+~~~
+
+- tps：该设备每秒的传输次数（Indicate the number of transfers per second that were issued to the device.）。"一次传输"意思是"一次I/O请求"。多个逻辑请求可能会被合并为"一次I/O请求"。"一次传输"请求的大小是未知的。
+- kB_read/s：每秒从设备（drive expressed）读取的数据量；
+- kB_wrtn/s：每秒向设备（drive expressed）写入的数据量；
+- kB_read：读取的总数据量；
+- kB_wrtn：写入的总数量数据量；这些单位都为Kilobytes。
+
+iostat还有一个-x选项，能显示磁盘性能相关的更详尽的信息，但一般情况下应该用不到，先不列出了。
+
+#### 其他
+
+包括：ss, sar, mpstat。 linux下相关的命令太多，不需要一一记住，掌握几个就可以了。
 
 ### 参考
 
