@@ -25,12 +25,73 @@ Spring里一直有一些故弄玄虚的术语，什么IoC、DI、AOP、AOP里又
 
 ### Spring中IoC容器的体系结构
 
+Spring内部有非常复杂的接口和类层次设计。如果是学习的目的，没必要也很难完全理清楚里面的接口关系甚至是设计目的。这里我们只关注几个最重要的接口和它们的继承关系。
+
+#### 容器
+
+图
+
+图中有两个设计主线：
+
+- BeanFactory。只定义最简单的IoC容器的基本功能。如`getBean`。
+- ApplicationContext。ApplicationContext继承BeanFactory，也就是它也是IoC容器，只是它的功能更丰富：它同时继承ResourcePatternResolver，MessageSource等接口，是高级容器。
+
+#### Bean在容器中的抽象
+
+SpringIOC容器管理了我们定义的各种Bean对象及其相互的关系，Bean对象在Spring实现中是以BeanDefinition来描述的，其继承体系如下：
+
+#### Reader
+
+上文说了，Bean加载的过程会有这一步：将Bean的信息以流的方式读入内存，然后对它做一定的封装，使我们可以读取这些内容的信息，然后处理。这个过程由Reader接口类实现：
+
+#### Resource
+
+Resource是Spring中对资源的抽象的一系列接口，最主要的实现类是：ClassPathResource。
+
+#### 编程的方式使用这些接口
+
+下面，我们用编程的方式使用上面的接口，看看IoC初始化的过程中，这些类需要怎么合作：
+
+~~~ Java
+ClassPathResource res = new ClassPathResource("bean.xml");
+DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
+XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);
+reader.loadBeanDefinitions(res);
+~~~
+
+这样，就初始化好了容器变量`factory`，看看这四行代码，分别做了什么：
+
+1. 创建IoC配置文件的抽象资源，这个抽象资源就包含了BeanDefinition的信息。
+2. 创建一个BeanFactory。
+3. 使用XmlBeanDefinitionReader这个读取器，来载入XML文件形式的`res`，通过一个回调配置给BeanFactory。
+4. `reader`从`res`里读取配置信息。
+
 
 
 ### IoC容器加载过程
+
+下面，我们看看XmlBeanFactory的实现代码，来看看IoC容器加载的全过程：
+
+~~~ java
+public class XmlBeanFactory extends DefaultListableBeanFactory {
+	private final XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this);
+
+	public XmlBeanFactory(Resource resource) throws BeansException {
+		this(resource, null);
+	}
+
+	public XmlBeanFactory(Resource resource, BeanFactory parentBeanFactory) throws BeansException {
+		super(parentBeanFactory);
+		this.reader.loadBeanDefinitions(resource);
+	}
+}
+~~~
+
+
 
 
 
 ### 参考
 
+- 《SPRING技术内幕》
 - http://www.cnblogs.com/ITtangtang/p/3978349.html#a1
