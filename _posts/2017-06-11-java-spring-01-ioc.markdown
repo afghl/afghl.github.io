@@ -36,9 +36,25 @@ Spring内部有非常复杂的接口和类层次设计。如果是学习的目�
 - BeanFactory。只定义最简单的IoC容器的基本功能。如`getBean`。
 - ApplicationContext。ApplicationContext继承BeanFactory，也就是它也是IoC容器，只是它的功能更丰富：它同时继承ResourcePatternResolver，MessageSource等接口，是高级容器。
 
+Spring中对于ApplicationContext的一部分实现是，它会持有一个BeanFactory作为私有变量来帮它实现这些接口。如：
+
+~~~ Java
+public abstract class AbstractRefreshableApplicationContext extends AbstractApplicationContext {
+
+	private Boolean allowBeanDefinitionOverriding;
+
+	private Boolean allowCircularReferences;
+
+	/** Bean factory for this context */
+	private DefaultListableBeanFactory beanFactory;
+}
+~~~
+
+那么实际上ApplicationContext的一部分操作是内部的beanFactory实现的。
+
 #### Bean在容器中的抽象
 
-SpringIOC容器管理了我们定义的各种Bean对象及其相互的关系，Bean对象在Spring实现中是以BeanDefinition来描述的，其继承体系如下：
+SpringIOC容器管理了我们定义的各种Bean对象及其相互的关系，Bean对象在Spring实现中是以BeanDefinition来描述的，其继承体系如下，BeanDefinition是什么意思？就是要创建Bean时的一种药方，该创建成什么样，都由BeanDefinition记录：
 
 #### Reader
 
@@ -86,65 +102,67 @@ public class FileSystemXmlApplicationContext extends AbstractXmlApplicationConte
 当我们new一个FileSystemXmlApplicationContext的时候，主要调用的是`refresh`方法来进行容器的初始化，看看里面的实现：
 
 ~~~ java
-public void refresh() throws BeansException, IllegalStateException {
-    synchronized (this.startupShutdownMonitor) {
-        // Prepare this context for refreshing.
-        prepareRefresh();
-
-        // Tell the subclass to refresh the internal bean factory.
-        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
-
-        // Prepare the bean factory for use in this context.
-        prepareBeanFactory(beanFactory);
-
-        try {
-            // Allows post-processing of the bean factory in context subclasses.
-            postProcessBeanFactory(beanFactory);
-
-            // Invoke factory processors registered as beans in the context.
-            invokeBeanFactoryPostProcessors(beanFactory);
-
-            // Register bean processors that intercept bean creation.
-            registerBeanPostProcessors(beanFactory);
-
-            // Initialize message source for this context.
-            initMessageSource();
-
-            // Initialize event multicaster for this context.
-            initApplicationEventMulticaster();
-
-            // Initialize other special beans in specific context subclasses.
-            onRefresh();
-
-            // Check for listener beans and register them.
-            registerListeners();
-
-            // Instantiate all remaining (non-lazy-init) singletons.
-            finishBeanFactoryInitialization(beanFactory);
-
-            // Last step: publish corresponding event.
-            finishRefresh();
-        }
-
-        catch (BeansException ex) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("Exception encountered during context initialization - " +
-                        "cancelling refresh attempt: " + ex);
-            }
-
-            // Destroy already created singletons to avoid dangling resources.
-            destroyBeans();
-
-            // Reset 'active' flag.
-            cancelRefresh(ex);
-
-            // Propagate exception to caller.
-            throw ex;
-        }
-    }
+public void refresh() throws BeansException, IllegalStateException {  
+       synchronized (this.startupShutdownMonitor) {  
+           //调用容器准备刷新的方法，获取容器的当时时间，同时给容器设置同步标识  
+           prepareRefresh();  
+           //告诉子类启动refreshBeanFactory()方法，Bean定义资源文件的载入从  
+          //子类的refreshBeanFactory()方法启动  
+           ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();  
+           //为BeanFactory配置容器特性，例如类加载器、事件处理器等  
+           prepareBeanFactory(beanFactory);  
+           try {  
+               //为容器的某些子类指定特殊的BeanPost事件处理器  
+               postProcessBeanFactory(beanFactory);  
+               //调用所有注册的BeanFactoryPostProcessor的Bean  
+               invokeBeanFactoryPostProcessors(beanFactory);  
+               //为BeanFactory注册BeanPost事件处理器.  
+               //BeanPostProcessor是Bean后置处理器，用于监听容器触发的事件  
+               registerBeanPostProcessors(beanFactory);  
+               //初始化信息源，和国际化相关.  
+               initMessageSource();  
+               //初始化容器事件传播器.  
+               initApplicationEventMulticaster();  
+               //调用子类的某些特殊Bean初始化方法  
+               onRefresh();  
+               //为事件传播器注册事件监听器.  
+               registerListeners();  
+               //初始化所有剩余的单态Bean.  
+               finishBeanFactoryInitialization(beanFactory);  
+               //初始化容器的生命周期事件处理器，并发布容器的生命周期事件  
+               finishRefresh();  
+           }  
+           catch (BeansException ex) {  
+               //销毁以创建的单态Bean  
+               destroyBeans();  
+               //取消refresh操作，重置容器的同步标识.  
+               cancelRefresh(ex);  
+               throw ex;  
+           }  
+       }  
+   }
 }
 ~~~
 
+注释来自[这边文章](http://www.cnblogs.com/ITtangtang/p/3978349.html)。
+
+- `obtainFreshBeanFactory`方法，是最重要的一步，上文说过，`ApplicationContext`实际会持有一个`beanFactory`，把容器的很多基本操作代理到这个field完成。这个方法做的事就是把`beanFactory`初始化好，拿出来，然后放到下面的方法里进行初始化。注册容器的信息源和生命周期事件。以FileSystemXmlApplicationContext为例，这里的初始化包括：
+   - 创建个Reader，将Class Path里的xml配置读进内存。
+   - 从配置里读取BeanDefinition。
+   - 将BeanDefinition注册到`beanFactory`中的`beanDefinitionMap`中。
+- `prepareBeanFactory`方法，添加一些 Spring 本身需要的一些工具类。该方法主要分成四步，如下：
+   1. 第一步，设置类加载器；
+   2. 第二步，设置属性编辑器注册类，用来注册相关的属性编辑器。
+   3. 第三步：设置内置的BeanPostProcessor：ApplicationContextAwareProcessor。该BeanPostProcessor的作用是，为实现特殊接口的bean，注入容器类（例如为实现ApplicationContextAware接口的类，注入ApplicationContext对象实例）。
+   4. 第四步：调用ignoreDependencyInterface，设置忽略自动注入的接口（因为这些接口已经通过ApplicationContextAwareProcessor注入了）。
+- `postProcessBeanFactory`：hook method。
+- `invokeBeanFactoryPostProcessors`：获取所有实现 BeanFactoryPostProcessor 接口的bean，然后按不同的优先级顺序，依次执行BeanFactoryPostProcessor的 postProcessBeanFactory 方法。Spring会暴露一个`BeanFactoryPostProcessor`接口，使用户可以对初始化过程中的`beanFactory`进行定制，这个定制是在这个方法中执行的。
+- `registerBeanPostProcessors`：顾名思义：注册`BeanFactoryPostProcessor`。通过beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false)，获取spring配置文件中所有实现BeanPostProcessor接口的bean。将bean放入AbstractBeanFactory类的beanPostProcessors列表中，根据bean实现的不同排序接口，进行分组、排序，然后逐一注册。
+- `initApplicationEventMulticaster`方法：这个方法的主要功能是为spring容器初始化ApplicationEventMulticaster，功能也相对简单，如果spring配置文件没有定义applicationEventMulticaster，则使用默认的。默认的ApplicationEventMulticaster实现类是SimpleApplicationEventMulticaster。
+- `onRefresh`：hook。
+- `finishBeanFactoryInitialization`：也是非常重要的一步。在这一步中会调用`beanFactory.preInstantiateSingletons()`，Spring容器是在这步初始化Bean的。下详。
+
+### IoC容器的依赖注入
 
 
 
