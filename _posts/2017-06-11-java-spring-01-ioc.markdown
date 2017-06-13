@@ -66,27 +66,84 @@ reader.loadBeanDefinitions(res);
 3. 使用XmlBeanDefinitionReader这个读取器，来载入XML文件形式的`res`，通过一个回调配置给BeanFactory。
 4. `reader`从`res`里读取配置信息。
 
-
-
 ### IoC容器加载过程
 
-下面，我们看看XmlBeanFactory的实现代码，来看看IoC容器加载的全过程：
+上面我们用编程的方式说明了Spring加载IoC容器的步骤和这些重要的接口是怎样相互协作的。下面我们来看看在生产环境中，是怎么初始化IoC容器的，我们用常用的ApplicationContext实现：FileSystemXmlApplicationContext说明：
 
-~~~ java
-public class XmlBeanFactory extends DefaultListableBeanFactory {
-	private final XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this);
+~~~ Java
+public class FileSystemXmlApplicationContext extends AbstractXmlApplicationContext {
+    public FileSystemXmlApplicationContext(String[] configLocations, boolean refresh, ApplicationContext parent) throws BeansException {
 
-	public XmlBeanFactory(Resource resource) throws BeansException {
-		this(resource, null);
-	}
-
-	public XmlBeanFactory(Resource resource, BeanFactory parentBeanFactory) throws BeansException {
-		super(parentBeanFactory);
-		this.reader.loadBeanDefinitions(resource);
-	}
+        super(parent);
+        setConfigLocations(configLocations);
+        if (refresh) {
+            refresh();
+        }
+    }
 }
 ~~~
 
+当我们new一个FileSystemXmlApplicationContext的时候，主要调用的是`refresh`方法来进行容器的初始化，看看里面的实现：
+
+~~~ java
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        // Prepare this context for refreshing.
+        prepareRefresh();
+
+        // Tell the subclass to refresh the internal bean factory.
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+        // Prepare the bean factory for use in this context.
+        prepareBeanFactory(beanFactory);
+
+        try {
+            // Allows post-processing of the bean factory in context subclasses.
+            postProcessBeanFactory(beanFactory);
+
+            // Invoke factory processors registered as beans in the context.
+            invokeBeanFactoryPostProcessors(beanFactory);
+
+            // Register bean processors that intercept bean creation.
+            registerBeanPostProcessors(beanFactory);
+
+            // Initialize message source for this context.
+            initMessageSource();
+
+            // Initialize event multicaster for this context.
+            initApplicationEventMulticaster();
+
+            // Initialize other special beans in specific context subclasses.
+            onRefresh();
+
+            // Check for listener beans and register them.
+            registerListeners();
+
+            // Instantiate all remaining (non-lazy-init) singletons.
+            finishBeanFactoryInitialization(beanFactory);
+
+            // Last step: publish corresponding event.
+            finishRefresh();
+        }
+
+        catch (BeansException ex) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Exception encountered during context initialization - " +
+                        "cancelling refresh attempt: " + ex);
+            }
+
+            // Destroy already created singletons to avoid dangling resources.
+            destroyBeans();
+
+            // Reset 'active' flag.
+            cancelRefresh(ex);
+
+            // Propagate exception to caller.
+            throw ex;
+        }
+    }
+}
+~~~
 
 
 
