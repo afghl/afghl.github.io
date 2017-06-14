@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "学习Spring（一） - IoC原理"
+title:  "学习Spring源码（一） - IoC原理"
 date:   2017-06-11 21:01:00 +0800
 ---
 
@@ -164,7 +164,7 @@ public void refresh() throws BeansException, IllegalStateException {
 
 ### IoC容器的依赖注入
 
-
+上文的refresh方法主要是在IoC容器中建立BeanDefinition映射。这个过程是在getBean接口实现的。详细的技术可以在《SPRING技术内幕》里看到，这里不再展开说了。
 
 ### 参考
 
