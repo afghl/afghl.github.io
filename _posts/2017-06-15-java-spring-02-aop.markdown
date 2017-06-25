@@ -101,7 +101,7 @@ InvocationHandler is the interface implemented by the invocation handler of a pr
 Each proxy instance has an associated invocation handler. When a method is invoked on a proxy instance, the method invocation is encoded and dispatched to the invoke method of its invocation handler.
 ~~~
 
-InvocationHandler只有一个`invoke`接口，当我们通过代理对象调用一个方法的时候，这个方法的调用就会被转发为由InvocationHandler这个接口的 invoke 方法来进行调用：
+InvocationHandler只有一个`invoke`方法，当我们通过代理对象调用一个方法的时候，这个方法的调用就会被转发为由InvocationHandler这个接口的 invoke 方法来进行调用：
 
 ~~~ java
 Object invoke(Object proxy, Method method, Object[] args) throws Throwable
