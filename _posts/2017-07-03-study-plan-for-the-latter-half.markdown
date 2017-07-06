@@ -11,6 +11,7 @@ date:   2017-07-03 23:15:00 +0800
    - 学习两个java项目源码：spring、netty
    - 看jdk源码：future、threadlocal、nio、线程池的实现
    - 再了解清楚jvm工作机制
+   - 知道一些JVM内存可视化工具的使用方法
    - 能解决出现在jvm层面的问题
 
 #### 操作系统 & 网络
