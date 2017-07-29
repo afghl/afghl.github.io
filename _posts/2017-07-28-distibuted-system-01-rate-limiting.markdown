@@ -75,3 +75,4 @@ date:   2017-07-28 09:38:00 +0800
 ### 参考
 
 - http://www.kissyu.org/2016/08/13/%E9%99%90%E6%B5%81%E7%AE%97%E6%B3%95%E6%80%BB%E7%BB%93/
+- https://en.wikipedia.org/wiki/Leaky_bucket
