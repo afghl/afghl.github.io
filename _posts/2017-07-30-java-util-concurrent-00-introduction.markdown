@@ -28,6 +28,10 @@ Concurrent collections. Several new collections classes were added, including th
 Locks. While locking is built into the Java language through the synchronized keyword, there are a number of limitations to built-in monitor locks. The java.util.concurrent.locks package provides a high-performance lock implementation with the same memory semantics as synchronization, and it also supports specifying a timeout when attempting to acquire a lock, multiple condition variables per lock, nonnested ("hand-over-hand") holding of multiple locks, and support for interrupting threads that are waiting to acquire a lock.
 **Nanosecond-granularity timing**. The System.nanoTime method enables access to a nanosecond-granularity time source for making relative time measurements and methods that accept timeouts (such as the BlockingQueue.offer, BlockingQueue.poll, Lock.tryLock, Condition.await, and Thread.sleep) can take timeout values in nanoseconds. The actual precision of the System.nanoTime method is platform-dependent.
 
+懒得翻译了。
+
+接下来看看这个包的源码，提出、分析并解答一些比较关键的问题。
+
 ### 参考
 
 - http://docs.oracle.com/javase/7/docs/technotes/guides/concurrency/overview.html
