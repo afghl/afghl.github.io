@@ -163,11 +163,27 @@ final void runWorker(Worker w) {
 
 - TERMINATED：终止状态。terminated方法调用完成以后的状态
 
+状态的流转：
 
+- RUNNING -> SHUTDOWN：显式调用shutdown()方法，或者隐式调用了finalize(),它里面调用了shutdown（）方法。
+
+- RUNNING or SHUTDOWN)-> STOP：显式 shutdownNow()方法
+
+- SHUTDOWN -> TIDYING：当线程池和任务队列都为空的时候
+
+- STOP -> TIDYING：当线程池为空的时候
+
+- TIDYING -> TERMINATED：当 terminated() hook 方法执行完成时候
+
+有限状态机：
+
+![Alt](/images/Executor-Lifecycle_4.png)
 
 ### 关键方法
 
 下面，看看`ThreadPoolExecutor`的一些关键接口的实现和机制。
+
+
 
 ### 参考
 
