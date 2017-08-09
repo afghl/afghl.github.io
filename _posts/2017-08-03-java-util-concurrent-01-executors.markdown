@@ -183,7 +183,9 @@ final void runWorker(Worker w) {
 
 下面，看看`ThreadPoolExecutor`的一些关键接口的实现和机制。
 
+#### execute
 
+#### shutdown
 
 ### 参考
 
@@ -191,3 +193,4 @@ final void runWorker(Worker w) {
 - https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ThreadPoolExecutor.html
 - http://ifeve.com/java-threadpool/
 - http://www.blogjava.net/xylz/archive/2011/01/18/343183.html
+- http://ifeve.com/java%E4%B8%AD%E7%BA%BF%E7%A8%8B%E6%B1%A0threadpoolexecutor%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/
