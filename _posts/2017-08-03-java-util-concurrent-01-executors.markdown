@@ -185,7 +185,42 @@ final void runWorker(Worker w) {
 
 #### execute
 
-#### shutdown
+看看`execute`方法的源码：
+
+~~~ java
+public void execute(Runnable command) {
+    if (command == null)
+        throw new NullPointerException();
+
+    //获取当前线程池的状态+线程个数变量
+    int c = ctl.get();
+
+    // 如果当前线程池的线程数是否小于 corePoolSize，如果是就新增一个线程执行任务
+    if (workerCountOf(c) < corePoolSize) {
+        if (addWorker(command, true))
+            return;
+        c = ctl.get();
+    }
+
+    // 如果线程池的线程池已经大于等于corePoolSize了，那就将任务添加到队列中，
+    if (isRunning(c) && workQueue.offer(command)) {
+        // recheck当前线程池的状态，如果不是RUNNING了，那就拒绝这个任务
+        int recheck = ctl.get();
+        if (! isRunning(recheck) && remove(command))
+            reject(command);
+        // 如果线程池为空，添加一个空的线程。
+        else if (workerCountOf(recheck) == 0)
+            addWorker(null, false);
+    }
+
+    // 代码能执行到这里，说明队列满了或线程池不是RUNNING状态，这时，再次尝试添加到线程池，如果失败就执行拒绝策略
+    else if (!addWorker(command, false))
+        reject(command);
+}
+~~~
+
+jdk8的线程池实现需要处理太多了并发问题了，无法在文中一一说清。先写到这里吧，有兴趣的可以再参见[这篇文章](http://ifeve.com/java%E4%B8%AD%E7%BA%BF%E7%A8%8B%E6%B1%A0threadpoolexecutor%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/
+)
 
 ### 参考
 
