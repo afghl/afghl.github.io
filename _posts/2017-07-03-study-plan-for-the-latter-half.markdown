@@ -32,7 +32,6 @@ date:   2017-07-03 23:15:00 +0800
 
    - 学习公司架构技术，到源码级别
    - 还不知道要学什么...但有几本书可以看
-   - https://www.youtube.com/watch?v=w8KFPWkK0bI&list=PLawkBQ15NDEkDJ5IyLIJUTZ1rRM9YQq6N 可以看看这系列视频
 
 #### DDD
 

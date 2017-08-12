@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "学习juc包 - 线程池"
-date:   2017-07-30 15:25:00 +0800
+date:   2017-08-03 15:25:00 +0800
 ---
 
 java.util.concurrent包提供了多线程编程相关的工具接口，主要有：`Executor`、`ExecutorService`、`Future`等。
