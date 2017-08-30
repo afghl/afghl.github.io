@@ -45,3 +45,4 @@ date:   2017-07-30 15:25:00 +0800
 - http://www.cnblogs.com/wanly3643/category/437878.html
 - http://www.blogjava.net/xylz/archive/2010/07/08/325587.html
 - http://gee.cs.oswego.edu/dl/papers/aqs.pdf
+- https://my.oschina.net/hosee/blog/615269
