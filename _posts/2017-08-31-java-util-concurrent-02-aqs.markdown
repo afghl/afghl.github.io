@@ -247,7 +247,7 @@ public static void park(Object blocker) {
 
 其实，如果是当前线程的策略是阻塞的话，这个方法理应是在线程刚被唤醒的时候执行的，所以，`tryAcquire`这几句放在阻塞后面执行也是可以的。
 
-### 小结
+#### 小结
 
 小结一下acquire方法，一次acquire的过程是这样的：
 
@@ -255,6 +255,95 @@ public static void park(Object blocker) {
 2. 如果成功获得锁（`tryAcquire`方法返回true），那么之后的操作都跳过，线程开开心心的从`acquire`方法返回。
 3. 否则为当前线程创建一个Node，加入到队列中。
 4. 当前线程被挂起，直到被唤醒，再循环尝试获取锁资源，（每次只有一个节点能获取锁资源，也就是`head.next`节点）成功获取锁之后返回，否则继续阻塞。
+
+### 分析 release 方法
+
+再看看锁的释放操作：
+
+~~~ java
+public final boolean release(int arg) {
+/*
+ 尝试释放锁如果失败，直接返回失败，如果成功并且head的状态不等于0就唤醒后面等待的节点
+*/
+    if (tryRelease(arg)) {
+        Node h = head;
+        if (h != null && h.waitStatus != 0)
+            unparkSuccessor(h);
+        return true;
+    }
+    return false;
+}
+~~~
+
+`tryRelease`方法由子类实现，看看`ReentrantLock`里实现的版本：
+
+~~~ java
+protected final boolean tryRelease(int releases) {
+// 释放后c的状态值
+    int c = getState() - releases;
+// 如果持有锁的线程不是当前线程，直接抛出异常
+    if (Thread.currentThread() != getExclusiveOwnerThread())
+        throw new IllegalMonitorStateException();
+    boolean free = false;
+    if (c == 0) {
+// 如果c==0，说明所有持有锁都释放完了，其他线程可以请求获取锁
+        free = true;
+        setExclusiveOwnerThread(null);
+    }
+// 这里只会有一个线程执行到这，不存在竞争，因此不需要CAS
+    setState(c);
+    return free;
+}
+~~~
+
+`tryRelease`做的事和`tryAcquire`一样，比较简单：修改`state`的值和置空`exclusiveOwnerThread`。
+
+然后看看`unparkSuccessor`方法：
+
+~~~ java
+private void unparkSuccessor(Node node) {
+    /*
+     * If status is negative (i.e., possibly needing signal) try
+     * to clear in anticipation of signalling.  It is OK if this
+     * fails or if status is changed by waiting thread.
+     */
+    int ws = node.waitStatus;
+    if (ws < 0)
+/*
+如果状态小于0，把状态改成0，0是空的状态，因为node这个节点的线程释放了锁后续不需要做任何
+操作，不需要这个标志位，即便CAS修改失败了也没关系，其实这里如果只是对于锁来说根本不需要CAS，因为这个方法只会被释放锁的线程访问，只不过unparkSuccessor这个方法是AQS里的方法就必须考虑到多个线程同时访问的情况（可能共享锁或者信号量这种）
+*/
+        compareAndSetWaitStatus(node, ws, 0);
+
+    /*
+     * Thread to unpark is held in successor, which is normally
+     * just the next node.  But if cancelled or apparently null,
+     * traverse backwards from tail to find the actual
+     * non-cancelled successor.
+     */
+    Node s = node.next;
+// 这段代码的作用是如果下一个节点为空或者下一个节点的状态>0（目前大于0就是取消状态）
+// 则从tail节点开始遍历找到离当前节点最近的且waitStatus<=0（即非取消状态）的节点并唤醒
+    if (s == null || s.waitStatus > 0) {
+        s = null;
+        for (Node t = tail; t != null && t != node; t = t.prev)
+            if (t.waitStatus <= 0)
+                s = t;
+    }
+    if (s != null)
+        LockSupport.unpark(s.thread);
+}
+~~~
+
+`unparkSuccessor`会唤醒`head.next`的线程，这个线程被唤醒后，会执行上面的`acquireQueued`方法的代码：将这个线程set为head。
+
+#### 小结
+
+一次unlock的调用，总结来说流程如下：
+
+1. 修改状态位
+2. 唤醒排队的节点
+3. 结合lock方法，被唤醒的节点会自动替换当前节点成为head
 
 ### 参考
 
