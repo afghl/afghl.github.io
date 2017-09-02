@@ -42,7 +42,219 @@ AQS是一个同步器，最起码需要提供这样两个接口：
 
 这几点也是AQS在设计API和数据结构时的思路。
 
-### 
+### 数据结构
+
+下面看看AQS内部的几个字段：
+
+- private volatile int state;
+- private transient volatile Node head;
+- private transient volatile Node tail;
+
+其中state描述的有多少个线程取得了锁，对于互斥锁来说state<=1。
+
+head/tail加上CAS操作就构成了一个CHL的FIFO队列。
+
+#### Node内部数据结构
+
+下面看看Node内部的数据结构：
+
+- volatile int waitStatus; 节点的等待状态，一个节点可能位于以下几种状态：
+
+   - 0： 正常状态，新生的非CONDITION节点都是此状态。
+   - CANCELLED = 1： 节点操作因为超时或者对应的线程被interrupt。节点不应该留在此状态，一旦达到此状态将从CHL队列中踢出。
+   - SIGNAL = -1： 节点的继任节点是（或者将要成为）BLOCKED状态（例如通过LockSupport.park()操作），因此一个节点一旦被释放（解锁）或者取消就需要唤醒（LockSupport.unpack()）它的继任节点。
+   - CONDITION = -2：表明节点对应的线程在等待Condition。
+
+   非负值标识节点不需要被通知（唤醒）。
+
+- volatile Node prev;此节点的前一个节点。节点的waitStatus依赖于前一个节点的状态。
+
+- volatile Node next;此节点的后一个节点。后一个节点是否被唤醒（uppark()）依赖于当前节点是否被释放。
+
+- volatile Thread thread;节点绑定的线程。
+
+- Node nextWaiter;下一个等待条件（Condition）的节点，由于Condition是独占模式，因此这里有一个简单的队列来描述Condition上的线程节点。
+
+### 分析 acquire 方法
+
+如上文所说，acquire动作就是获取锁，如果当前锁在被其他线程使用，会阻塞当前线程。acquire方法的实现：
+
+~~~ java
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) &&
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+~~~
+
+其中，`tryAcquire`方法需要子类实现，在这里先看`ReentrantLock`类里的公平锁`FairSync`是怎样实现这个方法的：
+
+~~~ java
+protected final boolean tryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    // c = 0 说明没有其他线程占有锁
+    if (c == 0) {
+        if (!hasQueuedPredecessors() &&
+            compareAndSetState(0, acquires)) {
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    }
+    else if (current == getExclusiveOwnerThread()) {
+        int nextc = c + acquires;
+        if (nextc < 0)
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    return false;
+}
+~~~
+
+这个方法是比较简单的：
+
+首先，这里的`hasQueuedPredecessors`方法是判断队列中是否有其他线程在等待锁（此方法非阻塞），然后将`state`变量（内部表示锁状态的变量）设为1，最后将`exclusiveOwnerThread`置位为当前thread，表示锁被当前线程占有。
+
+看后一半的代码，也就是`c == 0` 且 `Thread.currentThread() == getExclusiveOwnerThread()`，意思是重入了，这时简单执行state + 1，为什么不用CAS？因为只有一个线程可重入。
+
+在看acquire方法，当`tryAcquire`返回true时，其实下面的方法都不会执行了，也就是说，当锁是空闲状态时，获得锁操作是简单的set两个值：`state`，`exclusiveOwnerThread`。
+
+我们看`tryAcquire`为false时继续执行的代码：
+
+~~~ java
+acquireQueued(addWaiter(Node.EXCLUSIVE), arg)
+~~~
+
+我们先看addWaiter方法，这个方法是把当前请求放到队列中：
+
+~~~ java
+private Node addWaiter(Node mode) {
+    Node node = new Node(Thread.currentThread(), mode);
+
+// Try the fast path of enq; backup to full enq on failure
+// 上面这个官方注释很直白，其实下面的enq方法里也执行了这段代码，但是这里先直接试一下看能
+//  否插入成功
+    Node pred = tail;
+    if (pred != null) {
+        node.prev = pred;
+// CAS把tail设置成当前节点，如果成功的话就说明插入成功，直接返回node，失败说明有其他线程也
+// 在尝试插入而且其他线程成功,如果是这样就继续执行enq方法
+        if (compareAndSetTail(pred, node)) {
+            pred.next = node;
+            return node;
+        }
+    }
+    enq(node);
+    return node;
+}
+~~~
+
+（这里有一个小小巧妙的地方在这句`Node pred = tail;`，为什么要赋值一下？原因是在CAS成功之后如果执行：`tail.next = node;`，有可能tail已经被其他线程置位成其他的Node，而产生竞争问题）
+
+继续看enq方法：
+
+~~~ java
+
+private Node enq(final Node node) {
+    for (;;) {
+        Node t = tail;
+        if (t == null) { // Must initialize
+// 最开始head和tail都是空的，需要通过CAS做初始化，如果CAS失败，则循环重新检查tail
+            if (compareAndSetHead(new Node()))
+                tail = head;
+        } else {
+// head和tail不是空的，说明已经完成初始化，和addWaiter方法的上半段一样，CAS修改
+            node.prev = t;
+            if (compareAndSetTail(t, node)) {
+                t.next = node;
+                return t;
+            }
+        }
+    }
+}
+~~~
+
+`addWaiter`是对锁内部的线程FIFO的队列进行操作。这个方法执行完成后，锁内部的FIFO队列会多了一个Node。
+
+这里注意当`t == null`时，也就是第一次成功执行`addWaiter`方法，会调用：
+
+~~~ java
+compareAndSetHead(new Node())
+~~~
+
+给head创建一个空的Node。因此，AQS内部的队列，**head可以看作当前得到锁资源的线程**。
+
+此时线程还是没进入阻塞状态的。
+
+下面看看`acquireQueued`方法，这个方法会真正阻塞当前线程：
+
+~~~ java
+final boolean acquireQueued(final Node node, int arg) {
+    boolean failed = true;
+    try {
+        boolean interrupted = false;
+        for (;;) {
+            final Node p = node.predecessor();
+/*
+* 如果前置节点是head，说明当前节点是队列第一个等待的节点，这时去尝试获取锁，如果成功了则
+* 获取锁成功。这里有的同学可能没看懂，不是刚尝试失败并插入队列了吗，咋又尝试获取锁？ 其实这*
+* 里是个循环，其他刚被唤醒的线程也会执行到这个代码
+*/
+            if (p == head && tryAcquire(arg)) {
+// 队首且获取锁成功，把当前节点设置成head，下一个节点成了等待队列的队首
+                setHead(node);
+                p.next = null; // help GC
+                failed = false;
+                return interrupted;
+            }
+/* shouldParkAfterFailedAcquire方法判断如果获取锁失败是否需要阻塞，如果需要的话就执行
+*  parkAndCheckInterrupt方法，如果不需要就继续循环
+*/
+            if (shouldParkAfterFailedAcquire(p, node) &&
+                parkAndCheckInterrupt())
+                interrupted = true;
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+~~~
+
+先看这一句：
+
+~~~ java
+if (shouldParkAfterFailedAcquire(p, node) &&
+    parkAndCheckInterrupt())
+    interrupted = true;
+~~~
+
+这里，`parkAndCheckInterrupt`方法是挂起当前线程的。意思很清楚了，如果判断当前线程不应该阻塞的话，不会挂起当前线程，而是会自旋的执行for loop，判断是否轮到当前线程获得锁了（`p == head`），然后尝试`tryAcquire`获取锁。
+
+看看阻塞方法，它是调用unsafe，也就是JVM native方法实现的：
+
+~~~ java
+public static void park(Object blocker) {
+    Thread t = Thread.currentThread();
+    setBlocker(t, blocker);
+    UNSAFE.park(false, 0L);
+    setBlocker(t, null);
+}
+~~~
+
+还有一个问题是：为什么在`acquireQueued`方法中还要执行一次`tryAcquire`方法？
+
+其实，如果是当前线程的策略是阻塞的话，这个方法理应是在线程刚被唤醒的时候执行的，所以，`tryAcquire`这几句放在阻塞后面执行也是可以的。
+
+### 小结
+
+小结一下acquire方法，一次acquire的过程是这样的：
+
+1. 尝试调用`tryAcquire`方法，这个方法由子类实现，也就是说，怎样才算获得锁，获得锁之后要干什么，由子类自行判断。
+2. 如果成功获得锁（`tryAcquire`方法返回true），那么之后的操作都跳过，线程开开心心的从`acquire`方法返回。
+3. 否则为当前线程创建一个Node，加入到队列中。
+4. 当前线程被挂起，直到被唤醒，再循环尝试获取锁资源，（每次只有一个节点能获取锁资源，也就是`head.next`节点）成功获取锁之后返回，否则继续阻塞。
 
 ### 参考
 
@@ -50,3 +262,4 @@ AQS是一个同步器，最起码需要提供这样两个接口：
 - http://www.blogjava.net/xylz/archive/2010/07/06/325390.html
 - http://ifeve.com/java-special-troops-aqs/
 - http://gee.cs.oswego.edu/dl/papers/aqs.pdf
+- http://ifeve.com/juc-aqs-reentrantlock/
