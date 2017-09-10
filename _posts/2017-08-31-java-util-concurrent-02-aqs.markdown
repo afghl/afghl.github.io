@@ -6,7 +6,7 @@ date:   2017-08-31 00:02:00 +0800
 
 在分布式系统中，节点需要协作，同步。在多线程程序中，线程之间也需要协作，同步：一个线程进入某个方法之前可能需要等其他的某个线程执行完某个方法之后。我们使用锁来协调这些线程间同步。
 
-java1.5之后提供非语法层面的同步锁，比如ReentrantLock，这些锁内部都是使用一个类：java.util.concurrent.locks.AbstractQueuedSynchronizer，来完成核心工作的。这几篇文章就会从源码级别来看看aqs类的工作机制。
+java1.5之后提供非语法层面的同步锁，比如ReentrantLock，这些锁内部都是使用一个类：java.util.concurrent.locks.AbstractQueuedSynchronizer，来完成核心工作的。这篇文章就会从源码级别来看看aqs类的工作机制。
 
 ### AQS要提供的功能
 
