@@ -12,11 +12,11 @@ GC分为minor GC和major GC。
 
 当新生代的Eden分区满了，会触发minor GC。
 
-但full GC的触发时机和minor GC有所不同：full GC不会也不能等到整个堆内存都被占满才执行，想想这时候，整个JVM已经OOM了。所以，full GC的触发是判断阈值的，生产环境的full GC算法通常都用CMS，CMS回收的触发时机取决于这两个参数：
+但full GC的触发时机和minor GC有所不同：full GC不会也不能等到整个堆内存都被占满才执行，想想这时候，整个JVM已经OOM了。所以，full GC的触发是判断阈值的，生产环境的full GC算法通常都用CMS，CMS回收的触发时机取决于这三个参数：
 
 - CMSInitiatingOccupancyFraction：Percentage CMS generation occupancy to start a CMS collection cycle (A negative value means that CMSTirggerRatio is used). See good explanation about that parameter here.
 - CMSTriggerRatio：Percentage of MinHeapFreeRatio in CMS generation that is allocated before a CMS collection cycle commences
-- MinHeapFreeRatio：
+- MinHeapFreeRatio：Min percentage of heap free after GC to avoid expansion
 
 `CMSInitiatingOccupancyFraction`参数设置当堆内存使用占比为多少%时，将触发CMS回收（full GC）。我们的生产环境一般设置为60，也就是说当堆内存（CMSOldGen）占比超过60%时，将触发full GC。
 
@@ -28,13 +28,22 @@ GC threshold = MinHeapFreeRatio * CMSTriggerRatio
 
 ### 对象存活判断
 
+JVM使用可达性分析算法（Reachability Analysis）判断对象是否能被回收，具体不赘。只列出GC Root：
 
+- 虚拟机栈中引用的对象。
+- 方法区中类静态属性实体引用的对象。
+- 方法区中常量引用的对象。
+- 本地方法栈中JNI引用的对象。
+
+被GC root直接或间接引用的对象不能被回收。反之，就是应该回收的对象。
 
 ### GC算法
 
+
+
 ### GC收集器
 
-
+GC收集器是GC算法的实现。
 
 ### GC参数
 
