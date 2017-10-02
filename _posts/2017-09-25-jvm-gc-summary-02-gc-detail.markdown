@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "JVM GC 复习（二） - GC算法、回收器、GC过程"
+title:  "JVM GC 复习（二） - GC算法、GC过程"
 date:   2017-09-25 12:58:00 +0800
 ---
 
@@ -65,28 +65,28 @@ JVM使用可达性分析算法（Reachability Analysis）判断对象是否能�
 
 标记好存活的对象后，接下来就是清除可以回收的对象。在不同的收集器里，这一阶段可分为这三种做法：
 
-- sweep - 清扫：
+- sweep - 清扫
    这种做法相对是最简单最直观的。JVM会维护一个列表（free-list），marking阶段结束后，JVM会找到可以回收的对象的内存地址，然后记录在free-list里。也就是，free-list标记了哪些内存区域是可以被重用的。下次分配内存时会直接使用free-list上的空间。
 
    sweep最大的问题就是会引起内存碎片的问题。
 
-   GC-sweep.png
-
-   ![Alt](/images/gc(1).png)
+   ![Alt](/images/GC-sweep.png)
 
 - compact - 压缩（或整理）
+   顾名思义，compact算法会把marking阶段标记的存活的对象压缩到整个堆区域的一侧，而剩下的区域就是可以使用的空闲空间。这种做法的好处是：1. 克服了sweep算法的缺点：内存碎片。2. 为新建对象分配内存变得非常廉价 - 因为有连续的内存空间。
 
+   compact最大的缺点是：耗时长，因为将存活对象压缩到堆的一侧，其实是需要object copy的。所以GC pause会较长。
 
+   ![Alt](/images/GC-mark-sweep-compact.png)
 
 - copy - 复制
+   复制的做法和compact相似，只是不是把存活的对象压缩到一侧，而是把alive object复制到新的内存空间。那对比compact算法，它有什么优势呢？就是copy和mark两个阶段可以同时进行。所以它比compact的GC pause会更短。
 
+   它的缺点是：它需要更多的内存空间。见图：
 
+   ![Alt](/images/GC-mark-and-copy-in-Java.png)
 
-### GC收集器
-
-GC收集器是GC算法的实现。
-
-### GC参数
+### 涉及到的GC参数
 
 - -XX:+MaxTenuringThreshold。设置一个对象在新生代存活多少次minor GC后会晋升到老年代，默认值是15。
 
