@@ -37,7 +37,48 @@ JVM使用可达性分析算法（Reachability Analysis）判断对象是否能�
 
 被GC root直接或间接引用的对象不能被回收。反之，就是应该回收的对象。
 
+如图：
+
+![Alt](/images/gc(1).png)
+
 ### GC算法
+
+大部分的垃圾回收器的实现，其实就是两个阶段：
+
+1. 找到存活的对象。
+2. 清除其余的对象 - dead objects。
+
+其中，第一阶段需要借助标记（Marking）实现的。下面详细来看看：
+
+#### Marking Reachable Objects
+
+上一节已经说了JVM是使用可达性分析算法判断对象是否存活的。在Marking阶段，JVM会先找到预先定义好的GC Root（也就是上文列出的对象）。然后沿着GC ROOT递归的遍历所有引用的对象，这时候，所有被访问到的对象都会被标记（marked）是存活的。
+
+当遍历完成时，所有存活的对象都被标记了。剩下的对象就是可以被回收的。
+
+在这一步里，有这几点值得注意的：
+
+1. Marking阶段是stop-the-world的。否则，在标记的同时，所有对象还在不停的变换，会有很严重的bug。因为是stop-the-world的，所以JVM需要让所有线程都进入 **safe-point**，然后才能挂起线程。更具体的细节不做深入理解了，点到为止吧。
+2. 这阶段的耗时取决于所有 **alive object** 的 **数量**。既不是对象数量，也不是堆的大小。所以，增加堆的容量并不能降低marking阶段的耗时。
+
+#### Removing Unused Objects
+
+标记好存活的对象后，接下来就是清除可以回收的对象。在不同的收集器里，这一阶段可分为这三种做法：
+
+- sweep - 清扫：
+   这种做法相对是最简单最直观的。JVM会维护一个列表（free-list），marking阶段结束后，JVM会找到可以回收的对象的内存地址，然后记录在free-list里。也就是，free-list标记了哪些内存区域是可以被重用的。下次分配内存时会直接使用free-list上的空间。
+
+   sweep最大的问题就是会引起内存碎片的问题。
+
+   GC-sweep.png
+
+   ![Alt](/images/gc(1).png)
+
+- compact - 压缩（或整理）
+
+
+
+- copy - 复制
 
 
 
@@ -47,6 +88,8 @@ GC收集器是GC算法的实现。
 
 ### GC参数
 
+- -XX:+MaxTenuringThreshold。设置一个对象在新生代存活多少次minor GC后会晋升到老年代，默认值是15。
+
 ### 参考
 
 - http://blog.csdn.net/iter_zc/article/details/41802365
@@ -55,3 +98,4 @@ GC收集器是GC算法的实现。
 - https://www.dynatrace.com/resources/ebooks/javabook/how-garbage-collection-works/
 - https://plumbr.eu/handbook/what-is-garbage-collection
 - http://stas-blogspot.blogspot.hk/2011/07/most-complete-list-of-xx-options-for.html
+- http://xiao-feng.blogspot.com/2008/01/gc-safe-point-and-safe-region.html
