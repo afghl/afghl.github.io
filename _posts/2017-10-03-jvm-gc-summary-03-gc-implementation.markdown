@@ -23,7 +23,7 @@ JVM提供这几种GC收集器：
 | Parallel Scavenge      | Parallel Old |-XX:+UseParallelGC -XX:+UseParallelOldGC |
 | Parallel New      | CMS |-XX:+UseConcMarkSweepGC |
 | G1      |   |-XX:+UseG1GC |
-
+||||
 
 下面，分别介绍这四种GC组合。
 
