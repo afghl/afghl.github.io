@@ -80,7 +80,19 @@ CMS是为了避免长时间的GC暂停而设计的。也就生产环境常用的
 
 首先是minor GC阶段（第一行）：CMS使用ParNew收集器，minor GC的过程是stop-the-world的。
 
+整个full GC可分为5个phases，分别是：Initial Mark，Concurrent Marking，Remark，Concurrent Sweep，Resetting。下面，逐一来说下。
 
+**Initial Mark**：这一步是stop-the-world的。这一步是标记老年代中 **被新生代引用** 或 **本身就是GC Root** 的对象。这一步的stop-the-world时间很多，只取决于扫描新生代的时间。
+
+**Concurrent Marking**：这一步是并发的（不阻塞其他线程）。这一步中，GC收集器会从上一步标记到的对象开始，遍历整个堆空间，找到所有live objects。注意，由于这一步是和其他线程并发进行的，所以这阶段新产生的live objects是标记不了的。
+
+所以，在Concurrent Marking和Remark阶段之间还有两个步骤（在GC Log上可以看到），分别是Concurrent Preclean和Concurrent Abortable Preclean。这两个阶段也是并发的，非stop-the-world的。这两个阶段为了修复Concurrent Marking阶段新产生的对象。尽量减轻下一阶段（Remark）的stop-the-world的时间。
+
+**Remark**：这一步是stop-the-world的。对应GC Log也是最长的那一行。由于之前的Concurrent Marking是并发的，所以会有误差。CMS想要得到标记最准确的live object和dead object，必须要stop-the-world的，但由于之前的三步已经做了大部分的工作，所以Remark的stop-the-world时间是很短的。
+
+**Concurrent Sweep**：清扫堆中的可以回收的内存空间。具体的做法是将dead object的空间加入到free-list里，让下一次allocate使用这些空间。注意：在这一步中，live objects是没有移动的，只待在原处。
+
+**Resetting**：收尾工作，为下一次full GC准备。
 
 ### 参考
 
