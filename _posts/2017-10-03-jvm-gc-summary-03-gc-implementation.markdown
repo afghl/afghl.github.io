@@ -94,6 +94,16 @@ CMS是为了避免长时间的GC暂停而设计的。也就生产环境常用的
 
 **Resetting**：收尾工作，为下一次full GC准备。
 
+### G1
+
+G1收集器的设计目标和CMS类似，也是为了降低STW的时间，而且G1更进一步，你可以设置stop-the-world时间不超过x毫秒。
+
+要达到这样的目标，G1将整个堆内存划分为各个小的regions（通常是2048个）。这些regions可以充当Eden region、Survivor region或Old region。所有的Eden region和Survivor region组成新生代，所有的Old region组成老年代。
+
+化整为零之后，每次GC不需要扫描并回收整个堆空间，而只需要查看特定的regions。
+
+目前我们没有使用G1收集器，先不展开了。有兴趣的话可看参考的第一项，里面有非常详细的解释。
+
 ### 参考
 
 - https://plumbr.eu/handbook/garbage-collection-algorithms-implementations#parallel-minor-gc
