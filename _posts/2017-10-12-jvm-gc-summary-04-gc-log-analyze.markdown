@@ -66,7 +66,11 @@ date:   2017-10-12 12:02:00 +0800
 
 ### Major GC - Phase 1: Initial Mark
 
-这一步是stop-the-world的，对应的log是第2行：
+这一步是stop-the-world的，标记root。
+
+![Alt](/images/gclog-2.jpg)
+
+对应的log是第2行：
 
 2016-08-23T02:23:07.321-0200: 64.425: [GC (CMS Initial Mark) [1 CMS-initial-mark: 10812086K(11901376K)] 10887844K(12514816K), 0.0001997 secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
 
@@ -80,15 +84,93 @@ date:   2017-10-12 12:02:00 +0800
 
 ### Major GC - Phase 2: Concurrent Mark
 
-### Major GC - Phase 3: Initial Mark
+这一步是并发mark。
 
-### Major GC - Phase 4: Initial Mark
+![Alt](/images/gclog-3.jpg)
 
-### Major GC - Phase 5: Initial Mark
+对应的log是3 - 4行：
 
-### Major GC - Phase 6: Initial Mark
+2016-08-23T02:23:07.321-0200: 64.425: [CMS-concurrent-mark-start]
+2016-08-23T02:23:07.357-0200: 64.460: [CMS-concurrent-mark: 0.035/0.035 secs] [Times: user=0.07 sys=0.00, real=0.03 secs]
 
-### Major GC - Phase 7: Initial Mark
+1. CMS-concurrent-mark – 并发收集阶段，这个阶段会遍历整个年老代并且标记活着的对象；
+2. 035/0.035 secs – 展示该阶段持续的时间和时钟时间；
+3. [Times: user=0.07 sys=0.00, real=0.03 secs] – 同上
+
+### Major GC - Phase 3: Concurrent Preclean
+
+这个阶段又是一个并发阶段，和应用线程并行运行，不会中断他们。前一个阶段在并行运行的时候，一些对象的引用已经发生了变化，当这些引用发生变化的时候，JVM会标记堆的这个区域为Dirty Card(包含被标记但是改变了的对象，被认为"dirty")
+
+![Alt](/images/gclog-4.jpg)
+
+![Alt](/images/gclog-5.jpg)
+
+对应的log是5 - 6行：
+
+2016-08-23T02:23:07.357-0200: 64.460: [CMS-concurrent-preclean-start]
+2016-08-23T02:23:07.373-0200: 64.476: [CMS-concurrent-preclean: 0.016/0.016 secs] [Times: user=0.02 sys=0.00, real=0.02 secs]
+
+1. CMS-concurrent-preclean – 这个阶段负责前一个阶段标记了又发生改变的对象标记；
+2. 0.016/0.016 secs – 展示该阶段持续的时间和时钟时间；
+3. [Times: user=0.02 sys=0.00, real=0.02 secs] – 同上
+
+### Major GC - Phase 4: Concurrent Abortable Preclean
+
+这一阶段是为了减轻final remark阶段的stw时间。这一步是并发进行的。
+
+对应的log是7 - 8行：
+
+2016-08-23T11:23:07.373-0200: 64.476: [CMS-concurrent-abortable-preclean-start]
+2016-08-23T11:23:08.446-0200: 65.550: [CMS-concurrent-abortable-preclean: 0.167/1.074 secs] [Times: user=0.20 sys=0.00, real=1.07 secs]
+
+1. CMS-concurrent-abortable-preclean – 可终止的并发预清理；
+2. 0.167/1.074 secs – 展示该阶段持续的时间和时钟时间（It is interesting to note that the user time reported is a lot smaller than clock time. Usually we have seen that real time is less than user time, meaning that some work was done in parallel and so elapsed clock time is less than used CPU time. Here we have a little amount of work – for 0.167 seconds of CPU time, and garbage collector threads were doing a lot of waiting. Essentially, they were trying to stave off for as long as possible before having to do an STW pause. By default, this phase may last for up to 5 seconds）；
+3. [Times: user=0.20 sys=0.00, real=1.07 secs] – 同上
+
+### Major GC - Phase 5: Final Remark
+
+这一步是最后的标记，标记出所有的live objects。这一步是最后一个stop-the-world的阶段。
+
+对应的log是第9行：
+
+2016-08-23T02:23:08.447-0200: 65.550: [GC (CMS Final Remark) [YG occupancy: 387920 K (613440 K)]65.550: [Rescan (parallel) , 0.0085125 secs]65.559: [weak refs processing, 0.0000243 secs]65.559: [class unloading, 0.0013120 secs]65.560: [scrub symbol table, 0.0008345 secs]65.561: [scrub string table, 0.0001759 secs][1 CMS-remark: 10812086K(11901376K)] 11200006K(12514816K), 0.0110730 secs] [Times: user=0.06 sys=0.00, real=0.01 secs]
+
+1. 2016-08-23T11:23:08.447-0200: 65.550 – 同上；
+2. CMS Final Remark – 收集阶段，这个阶段会标记老年代全部的存活对象，包括那些在并发标记阶段更改的或者新创建的引用对象；
+3. YG occupancy: 387920 K (613440 K) – 年轻代当前占用情况和容量；
+4. [Rescan (parallel) , 0.0085125 secs] – 这个阶段在应用停止的阶段完成存活对象的标记工作；
+5. weak refs processing, 0.0000243 secs]65.559 – 第一个子阶段，随着这个阶段的进行处理弱引用；
+6. class unloading, 0.0013120 secs]65.560 – 第二个子阶段(that is unloading the unused classes, with the duration and timestamp of the phase);
+7. scrub string table, 0.0001759 secs – 最后一个子阶段（that is cleaning up symbol and string tables which hold class-level metadata and internalized string respectively）
+8. 10812086K(11901376K) – 在这个阶段之后老年代占有的内存大小和老年代的容量；
+9. 11200006K(12514816K) – 在这个阶段之后整个堆的内存大小和整个堆的容量；
+10. 0.0110730 secs – 这个阶段的持续时间；
+11. [Times: user=0.06 sys=0.00, real=0.01 secs] – 同上；
+
+### Major GC - Phase 6: Concurrent Sweep
+
+清扫dead objects。不需要stop-the-world的。
+
+![Alt](/images/gclog-6.jpg)
+
+对应的log是10 - 11行：
+
+2016-08-23T02:23:08.458-0200: 65.561: [CMS-concurrent-sweep-start]
+2016-08-23T02:23:08.485-0200: 65.588: [CMS-concurrent-sweep: 0.027/0.027 secs] [Times: user=0.03 sys=0.00, real=0.03 secs]
+
+1. CMS-concurrent-sweep – 这个阶段主要是清除那些没有标记的对象并且回收空间；
+2. 0.027/0.027 secs – 展示该阶段持续的时间和时钟时间；
+3. [Times: user=0.03 sys=0.00, real=0.03 secs] – 同上
+
+### Major GC - Phase 7: Concurrent Reset
+
+这一步是做一些收尾工作，回收CMS内部的数据结构，准备下一个CMS生命周期的使用。
+
+2016-08-23T11:23:08.485-0200: 65.589: [CMS-concurrent-reset-start] 2016-08-23T11:23:08.497-0200: 65.601: [CMS-concurrent-reset: 0.012/0.012 secs] [[Times: user=0.01 sys=0.00, real=0.01 secs]
+
+1. CMS-concurrent-reset – 这个阶段重新设置CMS算法内部的数据结构，为下一个收集阶段做准备；
+2. 0.012/0.012 secs – 展示该阶段持续的时间和时钟时间；
+3. [Times: user=0.01 sys=0.00, real=0.01 secs] – 同上
 
 ### 参考
 
