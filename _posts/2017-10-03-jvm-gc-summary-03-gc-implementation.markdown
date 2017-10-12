@@ -82,7 +82,7 @@ CMS是为了避免长时间的GC暂停而设计的。也就生产环境常用的
 
 整个full GC可分为5个phases，分别是：Initial Mark，Concurrent Marking，Remark，Concurrent Sweep，Resetting。下面，逐一来说下。
 
-**Initial Mark**：这一步是stop-the-world的。这一步是标记老年代中 **被新生代引用** 或 **本身就是GC Root** 的对象。这一步的stop-the-world时间很多，只取决于扫描新生代的时间。
+**Initial Mark**：这一步是stop-the-world的。这一步是标记老年代中 **被新生代引用** 或 **本身就是GC Root** 的对象。这一步的stop-the-world时间很短，只取决于扫描新生代的时间。
 
 **Concurrent Marking**：这一步是并发的（不阻塞其他线程）。这一步中，GC收集器会从上一步标记到的对象开始，遍历整个堆空间，找到所有live objects。注意，由于这一步是和其他线程并发进行的，所以这阶段新产生的live objects是标记不了的。
 
