@@ -68,7 +68,7 @@ date:   2017-10-12 12:02:00 +0800
 
 这一步是stop-the-world的，标记root。
 
-![Alt](/images/gclog-2.jpg)
+![Alt](/images/gclog-2.png)
 
 对应的log是第2行：
 
@@ -86,7 +86,7 @@ date:   2017-10-12 12:02:00 +0800
 
 这一步是并发mark。
 
-![Alt](/images/gclog-3.jpg)
+![Alt](/images/gclog-3.png)
 
 对应的log是3 - 4行：
 
@@ -101,9 +101,9 @@ date:   2017-10-12 12:02:00 +0800
 
 这个阶段又是一个并发阶段，和应用线程并行运行，不会中断他们。前一个阶段在并行运行的时候，一些对象的引用已经发生了变化，当这些引用发生变化的时候，JVM会标记堆的这个区域为Dirty Card(包含被标记但是改变了的对象，被认为"dirty")
 
-![Alt](/images/gclog-4.jpg)
+![Alt](/images/gclog-4.png)
 
-![Alt](/images/gclog-5.jpg)
+![Alt](/images/gclog-5.png)
 
 对应的log是5 - 6行：
 
@@ -151,7 +151,7 @@ date:   2017-10-12 12:02:00 +0800
 
 清扫dead objects。不需要stop-the-world的。
 
-![Alt](/images/gclog-6.jpg)
+![Alt](/images/gclog-6.png)
 
 对应的log是10 - 11行：
 
