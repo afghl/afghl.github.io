@@ -33,9 +33,18 @@ GFS是Google为其内部应用设计的分布式存储系统。google内部对�
 
 ### master fault tolerant
 
-
+如上所述，gfs的架构是single master的，那么会引起两个问题：1. 单点故障，2. master读写瓶颈。看看gfs是怎么解决这两个问题。
 
 ### consistency model
+
+gfs对外提供的一致性保证中，提供了4中语义：分别是：
+
+consistent：所有client都能读到相同的data
+defined：是consistent的而且都能完整的读到最新的写入
+inconsistent and also undefined：different clients may see different data at different times。
+什么时候会发生？failure
+undefined but consistent：所有client都能读到相同的data，但有可能看不到任何新的写入，
+也就是说有可能写入了一些并发数据
 
 ### data flow
 
