@@ -59,3 +59,4 @@ undefined but consistent：所有client都能读到相同的data，但有可能�
 - http://nil.csail.mit.edu/6.824/2017/notes/l-gfs-short.txt
 - http://www.cs.cornell.edu/courses/cs6464/2009sp/lectures/15-gfs.pdf
 - https://zhuanlan.zhihu.com/p/28155582
+- http://pages.cs.wisc.edu/~remzi/Classes/537/Fall2008/Notes/gfs.pdf
