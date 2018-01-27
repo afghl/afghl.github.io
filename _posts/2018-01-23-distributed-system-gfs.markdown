@@ -87,7 +87,26 @@ record append是gfs的核心feature，它保证多client并发的以record appen
 
 ### record append
 
+gfs定义一种原子操作：一次写入的数据必须是原子性的添加到文件 **结尾**（record append 操作必须写入文件尾部，不支持随机写的record append操作）。这样的操作称为record append。这样的操作提供一种一致性保证：即使是多个clients同时执行record append操作，即使完全没有任何的同步机制，也不会出现并发问题。
 
+下面来说说record append 的实现。
+
+record append 和普通的write在流程上基本一致，不同点在于：
+
+1. 写入的chunk index不再由client指定，client只能指定data要写入到文件尾部。gfs会选择data最终落在哪个chunk上。
+2. 单次写入的data是有大小限制的（想想看，如果不加限制，根本不可能保证原子性和性能上的可用）：单次写入最大体积是1/4个chunk size，也就是16mb。
+3. 在流程上，record append有额外的一步：在真正写入磁盘前，作为primary的chunk server会检查：这一次写入时候会超过当前chunk的最大容量，如果否，正常写入；如果是，会：
+   1. 在当前chunk上，用添加padding的方式将它填满。（也就是不让其他客户端再写入这个chunk了）。
+   2. 给client返回失败，让客户端重试。
+
+gfs通过这几点保证，一次写入的data会写到单一的chunk上，从而保证record append的一致性保证。
+
+当然，这种操作会引入新的问题：
+
+1. 在上面的第三点，如果一次写入失败，那么padding的数据其实是stale data，这样的case该如何处理？
+2. record append提供的是最少一次（at least once）的原子写入，也就是，有可能有多次成功的写入，导致产生重复的数据，这样的case该如何检测和处理？
+
+留待读者在论文本身找到答案。 :)
 
 ### 参考
 
