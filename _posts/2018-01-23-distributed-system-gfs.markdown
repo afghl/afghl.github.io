@@ -48,13 +48,17 @@ gfs的架构图如下：
 
 #### master高可用
 
+该如何解决master的单点问题呢？或者说，master的高可用，该怎么做？答案是：冗余。
 
+master存储metadata，所有对metadata的修改都是有操作日志的。操作日志对master的高可用起着重要的作用：一旦master挂了，只要operation log没丢，可以根据它，反向计算出master的state。而冗余的关键就在冗余操作日志，将操作日志多实例备份，在master挂了的时候，使用backup，读取operation log，恢复状态，继续提供服务。
+
+在这点设计上，gfs的做法是，保证一致性，一定程度的牺牲可用性：每次client和master的交互，gfs会同步的将操作日志记录在本地，并发送到backup节点，操作日志写入到本地和远程的磁盘都成功，才会返回给客户端。
 
 ### consistency model
 
 ![Alt](/images/gfs-2.jpg)
 
-如上图，gfs对外提供的一致性保证中，提供了4中语义。分别是：
+如上图，gfs对外提供的一致性保证中，提供了4种语义。分别是：
 
 1. **consistent**：所有client都能读到相同的data
 2. **defined**：是consistent的而且都能完整的读到最新的写入
@@ -67,9 +71,23 @@ record append是gfs的核心feature，它保证多client并发的以record appen
 
 ### data flow
 
+再说record append之前，说一下一个普通的写入操作，client、master、chunkserver三者的交互过程。
+
+![Alt](/images/gfs-3.jpg)
+
+数据的写入可分为7步：
+
+1. 客户端向Master查询待写入的chunk的副本信息，
+2. Master返回副本列表，第一项为主副本，即当前持有租约的副本；
+3. 客户端向多副本推送待写入数据，这里的推送是指将数据发送至chunk多副本，chunkserver会缓存这些数据，此时数据并不落盘；
+4. 客户端向主副本发起Sync请求；
+5. 主副本将数据写入本地的同时通知其他副本将数据写入各自节点，此时数据方才落盘；
+6. 主副本等待所有从副本的sync响应；
+7. 主副本给客户端返回写入成功响应
+
 ### record append
 
-### data detection
+
 
 ### 参考
 
