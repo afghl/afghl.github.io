@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "分布式系统 - 关于异地多活的一点笔记"
+title:  "分布式系统 - 关于异地多活的一点笔记 - overview"
 date:   2018-02-11 09:10:00 +0800
 ---
 
@@ -74,15 +74,55 @@ date:   2018-02-11 09:10:00 +0800
 3. 此时需要做两件事，使两边机房的数据尽快同步：
    1. 阻止原机房的继续写入
    2. 阻止目标机房的写入
-4. 比较数据复制的timestamp是否追平了reshard_at。
+4. 比较数据复制的timestamp是否追平了reshard_at。（由于数据复制中心是保证顺序一致性的，所以这个追平是可以保证的）
 5. 直到追平了reshard_at字段，再允许目标机房的写入流量。
-
-
 
 #### 就是要强一致
 
-#### mq的问题
+电商场景下必须要求强一致的场景是支付和交易。这种场景如果要做成多活，是弊大于利的。对有强一致要求的服务，采用单数据中心写入，其他数据中心只读的策略。
+
+一个需要强一致的服务，它的部署架构是这样的：
+
+![Alt](/images/multi-datacenter-2.jpg)
+
+如图可看到，和普通多活的区别是：是single-master的架构。在正常状态下，有一半的写流量会跨机房。这种路由是由中间件完成的，业务不感知。
+
+在failover的时候，会把主库切到另一个机房，会出现的问题可见上一篇文章。
+
+另一个更让业务开发人员讨厌的问题是：跨机房的主从延迟会增加到30ms以上，当时大部分的代码改造都在于，用各种手段避免主从延迟。
+
+#### 跨机房soa调用
+
+在上图中，一个请求会在进入内网的时候就被路由到正确的机房。但实际情况中，总有例外：
+
+1. 集群内部发起的补偿路径，不是外网流量，那么要在请求处理的某一节点判断该由哪个机房处理。
+2. 批量操作的接口，比如要更新两个店铺，一个应该在机房A处理，一个应该在机房B处理，那必将产生跨机房的SOA调用。
+3. 非多活项目对多活项目的依赖。
+
+这个问题的解决方案是通过新增一个中间件来实现的。具体的实现会在下一篇讨论一下。
 
 ### 最终方案
 
-### 看看细节
+饿厂异地多活的最终架构可见下图：
+
+![Alt](/images/multi-datacenter-3.jpg)
+
+上图是来自饿了么在QCon的演讲。其中，大部分的解决方案都在上文提到了。几个基础的组件都已经介绍了：
+
+- gzs是一个全局的（所有机房都可以访问的）服务，保存和推送sharding信息。
+- API router复制路由外网流量
+- SOAProxy实现跨机房调用
+- 强一致数据库 / 数据库层的拦截 由DAL实现（图上没展示）
+- DRC实现Mqsql的双向复制
+
+图中还有两个概念，ezone / sharding。ezone和机房可以认为是一一对应的关系，sharding和ezone是逻辑mapping关系。
+
+当发生多活切换时，实际上是切换sharding和ezone的mapping关系。比如在上图中，sharding 1 2 属于ezone 1，sharding 3 4 属于ezone 2。多活切换时，配置gzs，使sharding 1 2 3 4都属于ezone 1。即可实现流量调度。
+
+下一篇，会讨论一下这些中间件的设计思路和需要突破的一些技术难点。
+
+### 参考
+
+- https://blog.cdemi.io/design-patterns-cache-aside-pattern/
+- https://shadowbasesoftware.com/solutions/business-continuity/continuous-availability/
+- http://www.infoq.com/cn/presentations/the-infrastructure-construction-of-eleme
