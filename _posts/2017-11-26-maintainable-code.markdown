@@ -12,15 +12,13 @@ date:   2017-11-26 16:18:00 +0800
 
 ### 起码，分个层（建立多层次的抽象）
 
-在计算机领域中，任何设计都可见到分层的思想。一个典型的运用就是TCP / IP七层协议：每一层专注在解决自己的问题，完成对上一层的保证。下层对上层封装复杂度，提供抽象。
-
 现在的项目一般会使用第三方框架，业务开发人员的代码相当于在一个框架里填入自己的业务逻辑。也就是说，这种项目天然的有来自框架的抽象，天然的有分层。
 
 但是除此之外，业务开发人员的代码基本上是“事务脚本”，也就是将这件接口要做什么，从头到脚写出来，通常是这样：在数据库里拉出什么对象，改里面的某些值，然后在调用持久层的方法放回去。这样的问题是什么？是 **缺乏抽象层次的代码不能表现领域逻辑**。这样的代码如果人员调动频繁，而且缺乏文档和注释，这些代码的意图就会难以理解。
 
 更麻烦的情况是，将技术细节（比如访问mq中间件，redis的访问细节）耦合在这种事务脚本里，导致代码更难维护。
 
-正确的代码分层和好的OO设计可以很大程度的解决这个问题。它的思想也和其他领域的分层类似：每一层完成自己的任务，下层对上层提供抽象。
+正确的代码分层和好的OO设计可以很大程度的解决这个问题。它的思想也和其他领域的分层类似：每一层专注在解决自己的问题，下层对上层提供抽象。
 
 很多ddd的书里喜欢把代码分层这样设计：
 
@@ -40,17 +38,157 @@ date:   2017-11-26 16:18:00 +0800
 
 ### 用模型模型表现领域逻辑
 
-先来说说领域层。
+先来说说领域层。业务逻辑可以看成是领域模型的相互协作和影响。正确建模，然后在代码里把模型之间的关系显式的表达出来，是提高整个项目可维护性的第一步。
 
-#### 起码，让模型有表达的能力
+#### 让模型有表达的能力
 
-#### 领域模型能完成动作吗？
+先看几个bad taste。以我最近写的项目，店铺配送举例：一个店铺有配送费A、配送费B字段，且店铺的配送状态有可能改变，如果配送状态为A，则给外部返回配送费A，如果配送状态为B，则给外部返回B。
+
+我看过很多bad taste的代码，看起来会是这样：
+
+~~~ java
+
+class Delivery {
+    private int deliveryFeeA;
+    private int deliveryFeeB;
+    private DeliveryStatus status;
+}
+
+class DeliveryTransformer {
+    public static DeliveryDTO transform(Delivery input) {
+        DeliveryDTO output = new DeliveryDTO();
+        // ...
+
+        if (input.getStatus() == DeliveryStatus.StatusA) {
+            output.setDeliveryFee(input.getDeliveryFeeA());
+        } else if (input.getStatus() == DeliveryStatus.StatusB) {
+            output.setDeliveryFee(input.getDeliveryFeeB());
+        }
+
+        return output;
+    }
+}
+
+~~~
+
+这段代码的问题是：取配送费A还是配送费B的逻辑，实际上是 **非常重要的领域逻辑**。而这代码却将这段逻辑放在一个猥琐的角落，甚至跑出了领域层，到了外部接口层的transformer上去了。产生的问题不仅仅是代码复用差，更重要的是领域逻辑被淹没了。
+
+修改方法就是把这段逻辑放在model层，也就是领域层：
+
+~~~ java
+
+class Delivery {
+    private int deliveryFeeA;
+    private int deliveryFeeB;
+    private DeliveryStatus status;
+
+    public int getDeliveryFee() {
+        return status == DeliveryStatus.StatusA ? deliveryFeeA : deliveryFeeB;
+    }
+}
+
+class DeliveryTransformer {
+    public static DeliveryDTO transform(Delivery input) {
+        DeliveryDTO output = new DeliveryDTO();
+        // ...
+        output.setDeliveryFee(input.getDeliveryFee());
+        return output;
+    }
+}
+
+~~~
+
+上面的例子非常简单，思路就是将属于领域层的逻辑收归到model，这样的小重构使代码变得可复用，可维护。当领域层能表达足够多的领域逻辑时，实现新的需求变成了：调整 / 修改领域模型，使它更能描述当前领域。（至于怎么挖掘和发现模型，怎样对领域建模，不在本文的讨论范围，可以移步《领域驱动设计》）。
+
+接下来我们讨论，有什么逻辑应该移动到领域模型内：
+
+1. 状态类表述。模型得起码知道自己的类型 / 状态 / 属性。如上述例子。重构的方法也比较简单。
+2. 关键动作。领域模型能自己完成的关键动作。
+3. tell。有时，别的模型，或service对象，需要借助当前模型的领域知识。这样的领域知识，也应该封装在model里。举个例子：
+
+   对审核流任务建模，一个重要的领域逻辑是：当这个任务在生命周期的什么阶段，谁可以对这个任务有怎样的操作？直接上代码：
+
+   ~~~ java
+
+   class AuditJob {
+       private AuditStatus status;
+   }
+
+   class AuditService {
+       public void submitAction(Long jobId, User user, Action action, String remark) {
+           AuditJob job = AuditJobRepository.find(jobId);
+
+           if (job == null) {
+               throw new NotFoundException();
+           }
+
+           if (job.getStatus() == AuditStatus.Success || job.getStatus() == AuditStatus.Fail) {
+               throw new ServiceException();
+           }
+
+           if (job.getStatus() != AuditStatus.Initiailize && user.getRole() == UserRole.User) {
+               throw new ServiceException();
+           }
+
+           // ...
+       }
+   }
+
+   ~~~
+
+   上面代码中，AuditJob这个领域模型有足够的知识告诉上层，什么角色，什么操作，是允许的。这样的判断应该封装在model里：
+
+   ~~~ java
+
+   class AuditJob {
+       private AuditStatus status;
+
+       public boolean actionIsValid(UserRole role, Action action) {
+           if (this.isFinished()) {
+               return false;
+           }
+
+           if (role == UserRole.User && status == AuditStatus.Initiailize) {
+               return false;
+           }
+
+           // ...
+       }
+
+       public boolean isFinished() {
+           return status == AuditStatus.Success || status == AuditStatus.Fail;
+       }
+   }
+
+   class AuditService {
+       public void submitAction(Long jobId, User user, Action action, String remark) {
+           AuditJob job = AuditJobRepository.find(jobId);
+
+           if (job == null) {
+               throw new NotFoundException();
+           }
+
+           if (!job.actionIsValid(user.getRole(), action)) {
+               throw new ServiceException();
+           }
+
+           // ...
+       }
+   }
+
+   ~~~
+
+
+
+#### 领域模型能完成什么动作？
 
 ### 使用ddd构建聚合的概念
 
 聚合的概念，无论是在建模上，还是在代码上，都是一个对控制复杂度，提高代码表达能力的非常有效的抽象。
 
 #### 用代码表现聚合
+
+#### 封装聚合内模型的互动
 
 #### 校验整个聚合
 
@@ -65,12 +203,11 @@ date:   2017-11-26 16:18:00 +0800
 
 ### 使用领域事件分离支路逻辑
 
-一般来说，支路逻辑是可以
-
-
+一般来说，支路逻辑是可以异步化的，这样分离之后更容易实现异步化
 
 
 ### 参考
 
 - 《企业应用架构模式》
 - 《领域驱动设计》
+- 《实现领域驱动设计》
