@@ -370,9 +370,64 @@ public abstract class Validator {
 
 #### 保存聚合
 
+聚合的保存比想象中的复杂。聚合的保存需要原子性，一致性。这是通过数据库事务保证的。第二点是，每次更新都必须把整个聚合拉取出来，然后将整个聚合的所有模型保存一遍吗？
 
+在上层来看，的确是这样的，但在下层，可以有更复杂的处理：
+
+~~~ java
+public void save(Delivery originDelivery, Delivery delivery) throws ServiceException {
+    Transactor t = null;
+    try {
+        t = deliveryDatabase.startTransaction();
+        doSave(originDelivery, delivery);
+
+        t.commit();
+        DeliveryMetricCounter.logUpdatePathSuccess("save-to-db");
+    } catch (Exception e) {
+        logger.error(String.format("id为%s的店铺 更新配送信息失败: %s", delivery.getShopId(), e.getMessage()), e);
+        DeliveryMetricCounter.logUpdatePathFail("save-to-db", "exception");
+        throw new OperationFailedException(e.getMessage());
+    } finally {
+        if (t != null) {
+            t.close();
+        }
+    }
+}
+
+private void doSave(Delivery originDelivery, Delivery delivery) {
+    if (delivery.getBase() != null) {
+        deliveryBaseDao.createOrUpdate(delivery.getBase());
+    }
+
+    if (delivery.getRule() != null && differ.needSave(originDelivery == null ? null : originDelivery.getRule(), delivery.getRule())) {
+        deliveryRuleDao.createOrUpdate(delivery.getRule());
+    }
+
+    if (!CollectionUtils.isEmpty(delivery.getAreas())) {
+        List<DeliveryArea> originAreas = originDelivery == null ? new ArrayList<>() : originDelivery.getAreas();
+
+        for (DeliveryArea a : delivery.getAreas()) {
+            DeliveryArea originArea = originAreas.stream().filter(oa -> Objects.equals(oa.getId(), a.getId())).findFirst().orElse(null);
+            if (differ.needSave(originArea, a)) {
+                deliveryAreaDao.createOrUpdate(a);
+            }
+        }
+    }
+}
+~~~
+
+首先，持久化的时候需要传入两个对象：修改前的聚合和修改后的聚合。在持久化的时候，会通过`differ.needSave`方法比较原来的聚合和和更改后的聚合的内部模型，判断需要保存时，才调用`dao`的方法保存。
+
+这样做会增加一些技术复杂度在持久层，但因为仅仅是技术复杂度，无伤大雅，不会增加项目理解的难度。
 
 #### 使用版本号 解决并发问题
+
+使用版本号解决两个问题：
+
+1. 作为乐观锁，解决并发更新问题。
+2. 作为版本号，解决外部消息乱序问题。
+
+实现起来非常简单：在聚合内部的其中一个模型加入version字段（通常是聚合根所在的模型），每次对整个聚合更新时，判断数据库中的version和内存中的version一致，且将version+1（hibernate有现成的注解@Version可以使用）。
 
 ### 用facade模式控制外部访问
 ### 访问上下文外部
