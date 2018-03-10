@@ -430,13 +430,91 @@ private void doSave(Delivery originDelivery, Delivery delivery) {
 实现起来非常简单：在聚合内部的其中一个模型加入version字段（通常是聚合根所在的模型），每次对整个聚合更新时，判断数据库中的version和内存中的version一致，且将version+1（hibernate有现成的注解@Version可以使用）。
 
 ### 用facade模式控制外部访问
+
+在业务建模中，不同的限界上下文需要有信息交互。反映到项目代码就是：各种各样的接口调用。一个项目通常需要被人调用，也会调用别人的接口。先来看看需要被人调用的接口，这部分的代码应该怎么优化？
+
+简单的将所有外部接口分为两类：
+
+- 读取接口 - GET。用DDD的语言来说，就是其他限界上下文需要用到当前领域的知识。
+- 更新 - POST。用DDD的语言来说，就是其他限界上下文需要对当前领域产生影响。一般，一个领域需要对接多个其他的领域。反映到代码上，也就是需要提供各种更新接口给不同的调用方。
+
+在设计外部接口的时候，我们希望：
+
+1. 限制外部访问。限制主要就两点：1. 限制字段的访问，2. 限流。
+2. 在完成了1的基础上，复用代码。
+
+最好的手段是使用facade模式，在soaService层之上再增加一层facade接口。架构看起来会是这样：
+
+![Alt](/images/maintainable-code-2.png)
+
+facade作为整个领域的最外层，由它提供外部接口，对接各方，facade层则向下调用soaService层。
+
+代码示例：
+
+facade接口：
+
+~~~ java
+
+public interface ForLogisticsFacade {
+    void changeDeliverStatusAndSetFee(long shopId, long userId, DeliverStatusDTO status, Integer fee) throws ServiceException;
+}
+
+~~~
+
+店铺配送领域提供给物流领域一个接口：修改店铺配送的状态，同时修改配送费。
+
+在facade接口实现时，会向下调用一个最通用的update接口：
+
+~~~ java
+
+public class ForLogisticsFacadeImpl implement ForLogisticsFacade {
+    void changeDeliverStatusAndSetFee(long shopId, long userId, DeliverStatusDTO status, Integer fee) throws ServiceException {
+        DeliveryUpdateDTO update = new DeliveryUpdateDTO();
+        update.setDeliveryStatus(status);
+        update.setDeliveryFee(fee);
+        deliverySoaService.update(shopId, userId, update, UpdateSource.LOGISTICS);
+    }
+}
+
+~~~
+
+可见，facade接口相当于适配器，适配各个领域。它使外部接口免于暴露太多的领域细节，同时，通过正确调用soaService层的方法，实现代码复用。
+
+那如果需要对接的方很多，会不会增加复杂度呢？只要保持facade只做简单的转发，不做具体业务逻辑。无论facade层怎么膨胀，都不会使人难以理解。因为真正有价值的领域知识都已封装在核心层。
+
 ### 访问上下文外部
-### 不再写面条式的代码
+
+
 
 ### 使用领域事件分离支路逻辑
 
-一般来说，支路逻辑是可以异步化的，这样分离之后更容易实现异步化
+还有一个设计模式的运用，能达到不写“事务脚本”的目标，值得一提。
 
+在所有领域中，总是有相同的情况重复出现：领域中发生了某件事，需要对这件事做一些后续的操作，或者广播通知。例如，用户在完成注册后，系统会发出一封带有确认信息的邮件到用户的邮箱；用户关注的好友发送动态后他会收到相应的通知等等。
+
+把这种经常出现的情况抽象为了领域事件。将（不含领域知识的）支路逻辑抽取到领域事件的handler中实现。第二个好处是，一般来说，支路逻辑是可以异步化的，这样分离之后更容易实现异步化。
+
+领域事件使用发布订阅的设计模式实现的。(这篇文章)[/2017/09/23/ddd-domain-event-implementation.html]中，已经有代码表明怎样在infrastructure层构建这样的代码基础设施。
+
+一般来说，聚合的更新一定是领域中重要的领域事件。我的建模是这样的：
+
+~~~ java
+public class DeliveryUpdatedEvent implements DomainEvent {
+    private Logger logger = Vine.getLogger(DeliveryUpdatedEvent.class);
+
+    private long shopId;
+    private Delivery origin;
+    private Delivery update;
+    private UpdateSource source;
+    private String remark;
+    private Long userId;
+    private long version;
+    private EventContext ctx;
+    private LocalDateTime occurredTime;
+}
+~~~
+
+当这个领域事件发生之后，要做些什么，例如：发送mq信息，刷新redis缓存，记录changeRecord表。根据你的需求，编写不同的Subscriber并注册到Publisher即可。
 
 ### 参考
 
