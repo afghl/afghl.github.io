@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "写可维护的项目（代码）"
+title:  "写可维护的业务系统（代码）"
 date:   2017-11-26 16:18:00 +0800
 ---
 
@@ -299,16 +299,83 @@ class Delivery {
 
 聚合内两个模型的动作，也应该封装在聚合model里。这个就不举例了。
 
-#### 总是校验整个聚合
+#### 在一致性边界之内建模真正的不变条件
 
+标题这句话是说，聚合内的模型之所以会聚合起来，因为它们有真正的不变条件，不变的业务规则，任何操作都不能违背这些规则。这些条件应该在建模阶段就被发现。
 
+而且，在聚合内这种不变条件的要求是非常严格的（如果不是，则可能是建模阶段有问题）。它必须要求 **立即性，原子性** 。其中，原子性可以用数据库事务实现，立即性则要求，每次修改聚合，都对整个聚合进行校验。
+
+上面代码段有一行是：
+
+~~~ java
+validation.validateUpdate(delivery, updateDelivery);
+~~~
+
+实现是这样的：
+
+~~~ java
+public class DeliveryValidation {
+    private static Logger logger = Vine.getLogger(DeliveryValidation.class);
+
+    @Inject private CurrentDeliveryAreaValidator currentDeliveryAreaValidator;
+    @Inject private DeliveryAreaValidator deliveryAreaValidator;
+    @Inject private DeliveryRuleValidator deliveryRuleValidator;
+    @Inject private AreaGeometryValidator areaGeometryValidator;
+
+    private List<Validator> ALL;
+
+    private List<Validator> getAll() {
+        if (ALL != null) {
+            return ALL;
+        }
+
+        synchronized (DeliveryValidation.class) {
+            ALL = Arrays.asList(currentDeliveryAreaValidator, deliveryAreaValidator,
+                    deliveryRuleValidator, areaGeometryValidator);
+        }
+
+        return ALL;
+    }
+    public void validate(Delivery delivery) throws DeliveryInvalidException {
+        for (Validator v : getAll()) {
+            v.validate(delivery);
+        }
+    }
+
+    public void validateUpdate(Delivery originDelivery, Delivery updateDelivery) throws DeliveryInvalidException {
+        try {
+            for (Validator v : getAll()) {
+                if (updateDelivery.isDeleted()) {
+                    continue;
+                }
+
+                v.validateUpdate(originDelivery, updateDelivery);
+            }
+        } catch (DeliveryInvalidException e) {
+            DeliveryMetricCounter.logUpdatePathFail("validation", "validate-failed");
+            logger.error(String.format("shop_delivery validateUpdate failed. shopId: %s, productId: %s, error: ", updateDelivery.getShopId(), updateDelivery.getProductId()), e);
+            throw e;
+        }
+    }
+}
+
+public abstract class Validator {
+    public abstract void validate(Delivery shopDelivery) throws DeliveryInvalidException;
+
+    public abstract void validateUpdate(Delivery originDelivery, Delivery updateDelivery) throws DeliveryInvalidException;
+}
+~~~
+
+在任何更新操作保存之前，都会调用`validateUpdate`方法，验证聚合是否满足不变的条件。
 
 #### 保存聚合
+
+
 
 #### 使用版本号 解决并发问题
 
 ### 用facade模式控制外部访问
-### 怎样访问外部
+### 访问上下文外部
 ### 不再写面条式的代码
 
 ### 使用领域事件分离支路逻辑
