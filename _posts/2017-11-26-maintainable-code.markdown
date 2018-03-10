@@ -178,27 +178,137 @@ class DeliveryTransformer {
 
    ~~~
 
+#### 借助Service Object填充领域层
 
+在原教旨的ddd理论中，任何领域逻辑都应该表现在model层。但是在实际操作中，这样反而会让很多根本不会重用的逻辑放在了model层，发生了fat model的问题。
 
-#### 领域模型能完成什么动作？
+一个做法是在service做更多的事：
+
+1. 处理一些不会复用的业务逻辑。
+2. 协调多个model之间的协作，互动。
 
 ### 使用ddd构建聚合的概念
 
-聚合的概念，无论是在建模上，还是在代码上，都是一个对控制复杂度，提高代码表达能力的非常有效的抽象。
+聚合（Aggregate）的概念是 **一组高度相关的对象，作为一个数据修改的单元**。无论是在建模上，还是在代码上，都是一个对控制复杂度，提高代码表达能力的非常有效的抽象。
+
+关于聚合的概念可以参考《领域驱动设计》。
+
+下面还是以我最近写的项目，店铺配送举例。
 
 #### 用代码表现聚合
 
+当聚合被正确选择和设计出来之后，你就应该在代码层面表达这样的设计。
+
+javax.persistence包有很多注解可以关联model（如：`@OneToMany`）。但我发现这种注解并不灵活，反而让持久化变得繁琐。我觉得更好的方法是自己动手创建聚合实体。
+
+以店铺配送为例子，它可能有配送基本信息，配送规则，配送范围三个model，而聚合根是店铺id。那么聚合实体应该长这样：
+
+~~~ java
+public class Delivery {
+    private long shopId;
+    private DeliveryBase base;
+    private DeliveryRule rule;
+    private List<DeliveryArea> areas = new ArrayList<>();
+}
+~~~
+
+当然，这样设计后，hibernate或其他的持久化框架是认不出这个聚合实体的。所以你需要自己组装这个聚合：
+
+~~~ java
+public class DeliveryRepositoy {
+    public Delivery get(long shopId) {
+        DeliveryBase base = DeliveryBaseRepository.findByShopId(shopId);
+        if (base == null) {
+            return null;
+        }
+
+        Delivery d = new Delivery();
+        d.setShopId(shopId);
+        d.setBase(base);
+        // ... find rule and areas
+
+        return d;
+    }
+}
+~~~
+
+当有了这样的聚合对象后，尽可能在整个项目里都通过聚合访问和操作聚合内的模型（除持久化层外）。好处有两个：
+
+1. 提供一层抽象，封装聚合内部的细节。
+2. 控制项目外甚至项目中对整个聚合的访问。要保证这个聚合是修改更新的最小单元。
+
+举个例子，有时一个接口可能只是修改这个配送聚合的DeliveryArea这个模型的某个值，这时仍然应该以整个配送聚合为单位进行：
+
+SoaService层，提供以配送为粒度的接口：
+
+~~~ java
+public class DeliveryAreaSoaService {
+    public void createOrUpdate(long shopId, List<DeliveryAreaUpdateDTO> update) throws ServiceException;
+}
+~~~
+
+在实现时，`SoaService`会调用领域层的service，完成对整个聚合的操作：
+
+~~~ java
+    @Override
+    public void createOrUpdate(long shopId, List<DeliveryAreaUpdateDTO> update) throws ServiceException {
+        Delivery delivery = deliveryService.getBindMaster(shopId, productId);
+
+        if (delivery == null) {
+            throw new DeliveryNotFoundException();
+        }
+
+        Delivery updateDelivery = deliveryAreaService.set(delivery, transformer.transform(update));
+
+        validation.validateUpdate(delivery, updateDelivery);
+        deliveryService.save(delivery, updateDelivery);
+    }
+~~~
+
+`deliveryAreaService`是来自领域层的service，它对上层提供`set`方法的抽象：接受一个配送，接受更新信息，实现全部的业务逻辑，然后将整个聚合更新成正确的状态（即使改动的只是area模型），然后返回。
+
+`deliveryService`提供`save`方法，是原子的持久化方法。
+
 #### 封装聚合内模型的互动
 
-#### 校验整个聚合
+聚合本身可以有表达能力。原理和model的表达能力是一样的。除此之外更有价值的是，聚合封装了内部的互动，将涉及聚合内两个模型之间的领域逻辑表达出来。
+
+比如，一个店铺配送的配送范围可能随着时间变化而改变，这种奇葩的业务逻辑非常需要正确的封装：
+
+~~~ java
+
+class Delivery {
+
+    private long shopId;
+    private DeliveryBase base;
+    private DeliveryRule rule;
+    private List<DeliveryArea> areas = new ArrayList<>();
+
+    public DeliveryArea getCurrentArea() {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (base.isInRushHour(now)) {
+            return areas.stream().filter(DeliveryArea::isRushArea).findFirst().orElse(null);
+        } else {
+            return areas.stream().filter(DeliveryArea::isNormalArea).findFirst().orElse(null);
+        }
+    }
+}
+
+~~~
+
+聚合内两个模型的动作，也应该封装在聚合model里。这个就不举例了。
+
+#### 总是校验整个聚合
+
+
 
 #### 保存聚合
 
-#### 使用版本号 保证聚合的一致性
+#### 使用版本号 解决并发问题
 
 ### 用facade模式控制外部访问
 ### 怎样访问外部
-### 考虑拓展性（问问：如果xx怎么办？）
 ### 不再写面条式的代码
 
 ### 使用领域事件分离支路逻辑
@@ -211,3 +321,4 @@ class DeliveryTransformer {
 - 《企业应用架构模式》
 - 《领域驱动设计》
 - 《实现领域驱动设计》
+- https://www.cnblogs.com/Leo_wl/p/4142064.html
