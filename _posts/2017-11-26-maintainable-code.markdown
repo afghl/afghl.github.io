@@ -431,7 +431,7 @@ private void doSave(Delivery originDelivery, Delivery delivery) {
 
 ### 用facade模式控制外部访问
 
-在业务建模中，不同的限界上下文需要有信息交互。反映到项目代码就是：各种各样的接口调用。一个项目通常需要被人调用，也会调用别人的接口。先来看看需要被人调用的接口，这部分的代码应该怎么优化？
+在业务建模中，不同的限界上下文需要有信息交互。反映到项目代码就是：各种各样的接口调用。一个项目通常需要提供接口被人调用（输出），也会调用别人的接口（输入）。先来看看输出的部分，这部分的代码应该怎么优化？
 
 简单的将所有外部接口分为两类：
 
@@ -482,9 +482,115 @@ public class ForLogisticsFacadeImpl implement ForLogisticsFacade {
 
 那如果需要对接的方很多，会不会增加复杂度呢？只要保持facade只做简单的转发，不做具体业务逻辑。无论facade层怎么膨胀，都不会使人难以理解。因为真正有价值的领域知识都已封装在核心层。
 
-### 访问上下文外部
+### 怎样访问上下文外部
 
+再来看看输入的部分，也就是调用其他项目的接口，有什么需要注意的？
 
+通常调用其他项目的接口，拿到的是其他领域的实体。这种实体一般很难被当前领域理解。如果只是简单的消费某个接口的某个实体，可以直接调用。
+
+但如果是当前接口对其他领域的某个实体有重度依赖，甚至两个领域之间有依赖，那么则需要将这个实体封装起来。
+
+看一个bad case：
+
+~~~ java
+
+class Service {
+    @Inject private ElemeRestaurantService elemeRestaurantService;
+
+    public void execute() {
+        // ...
+        TRestaurant restaurant = elemeRestaurantService.get(message.getShopId());
+        Distribution currentDeliveryArea = DeliveryHelper.getCurrentDeliveryArea(restaurant);
+
+        ShopStatusDetail oldStatus = new ShopStatusDetail(
+               DeliveryHelper.getZeroDeliveryFees(restaurant),
+               AttrHelper.isLock(restaurant.getAttribute()),
+               currentDeliveryArea);
+        // ...
+    }
+}
+
+~~~
+
+当时，这个项目有大量这样的代码，这个方法重度依赖店铺领域的`TRestaurant`实体。而这个实体都极其复杂，导致整个“事务脚本”在不停的解析这个实体，提取有用的信息，如：`DeliveryHelper.getCurrentDeliveryArea`，`DeliveryHelper.getZeroDeliveryFees`，`AttrHelper.isLock`的方法。
+
+看上去没什么问题，因为解析的逻辑都抽离到各种“Helper”里了。但其实这仍然是面条式代码，只是将这些面条代码切割到不同的类里。不仅没有增加表达能力，而且比原来的代码增加了不必要的技术复杂度。（最终这个项目的结局是：因为技术复杂度太高而导致不能维护，需要重写）
+
+比较好的方法是，既然在领域层一直需要用到`TRestaurant`实体，那么将它封装起来，让它看起来与其他的领域对象无异：
+
+~~~ java
+
+public class RestaurantForBalance {
+    private TRestaurant restaurant;
+
+    public long getShopId() {
+        return restaurant.getId();
+    }
+
+    public Distribution getCurrentDeliveryArea() {
+        // implementation...
+    }
+
+    public List<Double> getDeliveryFeeItems() {
+        // implementation...
+    }
+
+    public boolean isLocked() {
+        // implementation...
+    }
+
+    public static RestaurantForBalance build(TRestaurant tRestaurant) {
+        Objects.requireNonNull(tRestaurant);
+        RestaurantForBalance r = new RestaurantForBalance();
+        r.restaurant = tRestaurant;
+        return r;
+    }
+}
+
+~~~
+
+同时，对调用方的接口也提供封装：
+
+~~~ java
+
+public class ErsClient {
+    @Inject
+    private ElemeRestaurantService elemeRestaurantService;
+
+    public RestaurantForBalance getRestaurantForBalance(Long restaurantId) {
+        TRestaurant tRestaurant = elemeRestaurantService.get(restaurantId);
+
+        if (tRestaurant == null) {
+            return null;
+        } else {
+            return RestaurantForBalance.build(tRestaurant);
+        }
+    }
+}
+~~~
+
+最后，在service层将不再访问`TRestaurant`实体，而是访问`RestaurantForBalance`实体：
+
+~~~ java
+
+class Service {
+    @Inject private ErsClient ErsClient;
+
+    public void execute() {
+        // ...
+        RestaurantForBalance restaurant = ersClient.getRestaurantForBalance(message.getShopId());
+        Distribution currentDeliveryArea = DeliveryHelper.getCurrentDeliveryArea(restaurant);
+
+        ShopStatusDetail oldStatus = new ShopStatusDetail(
+              restaurant.getDeliveryFeeItems(),
+              restaurant.isLocked(),
+              restaurant.getCurrentDeliveryArea()
+           );
+        // ...
+    }
+}
+
+~~~
 
 ### 使用领域事件分离支路逻辑
 
