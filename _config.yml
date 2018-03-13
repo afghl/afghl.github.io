@@ -18,3 +18,4 @@ github_username:  afghl
 
 # Build settings
 highlighter: rouge
+remote_theme: "mmistakes/minimal-mistakes"
