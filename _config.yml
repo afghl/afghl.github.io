@@ -18,3 +18,5 @@ github_username:  afghl
 
 # Build settings
 highlighter: rouge
+
+theme: jekyll-theme-cayman
