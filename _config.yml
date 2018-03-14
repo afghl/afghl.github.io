@@ -21,7 +21,7 @@ plugins:
 
 # Build settings
 highlighter: rouge
-theme: minimal-mistakes-jekyll
+remote_theme: "mmistakes/minimal-mistakes"
 
 include:
   - _pages
