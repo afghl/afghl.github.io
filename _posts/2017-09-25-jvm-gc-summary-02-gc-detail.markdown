@@ -1,7 +1,7 @@
 ---
 title:  "JVM GC 复习（二） - GC算法、GC过程"
 date:   2017-09-25 12:58:00 +0800
-tags: [production-issue jvm jvm-gc]
+tags: [jvm,jvm-gc]
 ---
 
 第一篇说完了JVM运行时的内存分区。这一篇说说GC的一些基本知识。GC是JVM层面的垃圾回收机制，它不由程序员控制。我们可以问：GC是什么时候对什么东西做了什么事？下文会从这个思路去行文。

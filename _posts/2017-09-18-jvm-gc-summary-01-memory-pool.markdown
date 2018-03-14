@@ -1,7 +1,7 @@
 ---
 title:  "JVM GC 复习（一） - 运行时内存分区与JVM参数"
 date:   2017-09-18 21:15:00 +0800
-tags: [production-issue jvm jvm-gc]
+tags: [jvm,jvm-gc]
 ---
 
 前几天线上出了个JVM方面的问题，看来有必要对JVM的知识再梳理和复习一下。（本系列会以JVM 8为例分析）
