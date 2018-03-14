@@ -1,7 +1,7 @@
 ---
-
 title:  "分布式系统case by case - google file system（GFS）"
 date:   2018-01-23 23:07:00 +0800
+tags: [distribute-system]
 ---
 
 google file system是15年前（2003）google发布的一个分布式文件系统论文，这篇论文可以说是分布式系统的入门经典。google应该是全球最早遇到如此复杂的分布式技术难题的公司。gfs是其中一个难题的解决方案：超大规模的，可靠的文件存储。看gfs的这篇论文，可以看到google的牛逼的大神们是怎样思考和工作的：遇到一个问题，做假设，设计系统，完成工程，最后将整个过程和经验输出为论文。

@@ -1,7 +1,7 @@
 ---
-
 title:  "分布式系统 - replication"
 date:   2018-02-06 23:11:00 +0800
+tags: [distribute-system]
 ---
 
 在看一本很棒的书，《Designing Data-Intensive Applications》。可以说是很多分布式问题的导论了。接下来会有一系列的文章结合书中内容，说说我的归纳、总结和一些思考。由于是一本关于分布式数据库的书，所以里面很多例子会以数据库领域遇到的问题作为引子，但是大部分分布式系统要解决的问题都是类似的。首先，来说说复制（replication）。
