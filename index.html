@@ -1,22 +1,4 @@
 ---
-layout: default
+layout: home
+author_profile: true
 ---
-
-<div class="header-bar">
-  <h1>有个博客</h1>
-  <h2>有个 博客</h2>
-  <br/>
-</div>
-
-
-<ul class="post-list">
-    {% for post in site.posts %}
-      <li>
-        <h2><a class="post-title" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a></h2>
-        <p class="post-meta">{{ post.date | date: '%B %-d, %Y — %H:%M' }}</p>
-        <p>{{ post.description }}</p>
-        <br/>
-        <hr/>
-      </li>
-    {% endfor %}
-</ul>

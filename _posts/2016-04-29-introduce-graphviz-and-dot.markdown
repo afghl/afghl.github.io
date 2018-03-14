@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "利用Graphviz看ActiveRecod源码"
 date:   2016-04-29 12:11:00 +0800
 ---

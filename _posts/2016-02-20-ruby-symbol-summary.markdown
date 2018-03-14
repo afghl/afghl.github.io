@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "Ruby Symbol 知识整理"
 date:   2016-02-20 16:07:00 +0800
 ---

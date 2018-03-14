@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "Java Nio（一） - Unix IO模型"
 date:   2016-12-17 18:26:00 +0800
 ---

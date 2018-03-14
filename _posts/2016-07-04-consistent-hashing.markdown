@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "一致性哈希（Consistent Hashing）原理"
 date:   2016-07-04 15:37:00 +0800
 ---

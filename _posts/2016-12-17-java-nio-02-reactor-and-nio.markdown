@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "Java Nio（二） - 用NIO实现Reactor模式"
 date:   2016-12-17 22:26:00 +0800
 ---

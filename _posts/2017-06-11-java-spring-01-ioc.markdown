@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "学习Spring源码（一） - IoC原理"
 date:   2017-06-11 21:01:00 +0800
 ---

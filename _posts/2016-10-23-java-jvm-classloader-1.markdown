@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "深入Java Classloader（一） - JVM模型和类加载机制"
 date:   2016-10-23 11:54:00 +0800
 ---

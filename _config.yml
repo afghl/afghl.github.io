@@ -16,9 +16,40 @@ baseurl: "" # the subpath of your site, e.g. /blog
 url: "http://afghl.github.io" # the base hostname & protocol for your site
 github_username:  afghl
 
-# plugins:
-#   - jekyll-remote-theme
+plugins:
+  - jekyll-archives
 
 # Build settings
 highlighter: rouge
-remote_theme: "mmistakes/minimal-mistakes"
+theme: minimal-mistakes-jekyll
+
+include:
+  - _pages
+
+encoding: "utf-8"
+
+author:
+  name   : "小码农"
+  avatar : "/images/avatar.jpg"
+  email  : "airport.0930@gmail.com"
+  uri    : "http://afghl.github.io"
+
+paginate_path: /page:num/
+
+tag_archive:
+  type: liquid
+  path: /tags/
+paginate: 15
+
+
+defaults:
+  # _posts
+  - scope:
+      path: ""
+      type: posts
+    values:
+      author_profile: true
+      layout: single
+      classes: wide
+      share: true
+      related: true

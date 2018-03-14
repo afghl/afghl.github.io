@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "深入Java Classloader（二） - Classloader工作机制"
 date:   2016-10-26 18:54:00 +0800
 ---

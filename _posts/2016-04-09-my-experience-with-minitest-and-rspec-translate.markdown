@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "Minitest和Rspec的比较（译）"
 date:   2016-04-09 12:11:00 +0800
 ---

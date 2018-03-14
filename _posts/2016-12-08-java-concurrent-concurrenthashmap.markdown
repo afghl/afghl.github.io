@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "从JMM层面说说Java并发（三） - ConcurrentHashmap（JDK1.6）"
 date:   2016-12-08 18:26:00 +0800
 ---

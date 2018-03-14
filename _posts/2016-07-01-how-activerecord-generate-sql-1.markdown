@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "ActiveRecord如何拼出一句Sql？—— （一）ActiveRecord、Relation与Arel"
 date:   2016-07-01 14:15:00 +0800
 ---

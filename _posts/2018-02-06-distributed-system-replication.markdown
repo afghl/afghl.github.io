@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "分布式系统 - replication"
 date:   2018-02-06 23:11:00 +0800
 ---

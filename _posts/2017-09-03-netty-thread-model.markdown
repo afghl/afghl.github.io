@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "netty线程模型"
 date:   2017-09-03 21:54:00 +0800
 ---

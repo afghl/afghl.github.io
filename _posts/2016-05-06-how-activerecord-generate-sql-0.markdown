@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "ActiveRecod如何拼出一句Sql？—— （零）刚好够用的关系代数基础"
 date:   2016-05-06 12:11:00 +0800
 ---

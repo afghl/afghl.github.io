@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "JVM GC 复习（五） - GC Tuning"
 date:   2017-10-18 12:02:00 +0800
 ---

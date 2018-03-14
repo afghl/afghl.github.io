@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "学习java.util.concurrent包"
 date:   2017-07-30 15:25:00 +0800
 ---

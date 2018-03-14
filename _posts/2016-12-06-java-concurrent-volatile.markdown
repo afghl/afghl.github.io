@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "从JMM层面说说Java并发（二） - volatile"
 date:   2016-12-06 18:26:00 +0800
 ---

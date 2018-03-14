@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "学习juc包 - FutureTask是如何实现的"
 date:   2017-09-09 23:39:00 +0800
 ---

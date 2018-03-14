@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "实现一致性哈希（Consistent Hashing）java版本"
 date:   2016-11-19 14:26:00 +0800
 ---

@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "JVM GC 复习（四） - 分析GC Log"
 date:   2017-10-12 12:02:00 +0800
 ---

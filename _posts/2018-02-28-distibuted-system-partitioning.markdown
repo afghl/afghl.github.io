@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "分布式系统 - partitioning"
 date:   2018-02-28 23:07:00 +0800
 ---

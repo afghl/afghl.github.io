@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "在markdown使用mathjax"
 date:   2016-05-15 11:27:00 +0800
 ---

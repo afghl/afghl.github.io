@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "Turbolinks 源码分析 - 后端篇"
 date:   2016-02-23 11:27:00 +0800
 ---

@@ -1,5 +1,5 @@
 ---
-layout: post
+
 title:  "Java集合框架源码解析（二） - LinkedList"
 date:   2016-10-30 11:54:00 +0800
 ---

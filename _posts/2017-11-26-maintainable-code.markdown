@@ -1,5 +1,6 @@
 ---
-layout: post
+layout: single
+classes: wide
 title:  "写可维护的业务系统（代码）"
 date:   2017-11-26 16:18:00 +0800
 tags: [code]
