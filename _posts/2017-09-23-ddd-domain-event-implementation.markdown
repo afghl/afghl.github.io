@@ -1,7 +1,7 @@
 ---
 title:  "用pub / sub实现DDD中的领域事件"
 date:   2017-09-23 12:16:00 +0800
-tags: [ddd code]
+tags: [ddd,code]
 ---
 
 领域事件是DDD里的一个概念。牛逼的领域专家觉得：
