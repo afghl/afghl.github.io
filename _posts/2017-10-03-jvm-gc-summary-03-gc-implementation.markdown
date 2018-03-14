@@ -1,7 +1,7 @@
 ---
-
 title:  "JVM GC 复习（三） - GC收集器"
 date:   2017-10-03 00:02:00 +0800
+tags: [production-issue jvm jvm-gc]
 ---
 
 (上一篇)[/2017/09/25/jvm-gc-summary-02-gc-detail.html]讲了一系列的GC算法。这一篇来看看这些算法的具体实现，也就是GC收集器。

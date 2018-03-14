@@ -1,7 +1,7 @@
 ---
-
 title:  "JVM GC 复习（四） - 分析GC Log"
 date:   2017-10-12 12:02:00 +0800
+tags: [production-issue jvm jvm-gc]
 ---
 
 上一篇说完GC收集器，这一篇科普一下另一项基本技能，同时也是排查问题的时候经常需要的：分析GC Log。
