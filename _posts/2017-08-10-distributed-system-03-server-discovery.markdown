@@ -30,7 +30,7 @@ DNS可以理解成是一个域名和IP的hash，客户端写上服务提供方�
 
 ![Alt](/images/Richardson-microservices-part4-4_self-registration-pattern.png)
 
-那实例怎么知道在何时，向谁，调用哪个API接口呢？答：SDK。没错，需要SDK，又会引入开发成本和升级成本的问题了。
+那实例怎么知道在何时，向谁，调用哪个API接口呢？没错，需要SDK，又会引入开发成本和升级成本的问题了。
 
 #### 第三方注册
 
