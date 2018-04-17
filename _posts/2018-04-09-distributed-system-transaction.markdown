@@ -88,7 +88,72 @@ Read Committed看上去很美好，但其实还有一些并发问题没有解决
 
 Repeatable Read（可重复读）是mqsql默认的隔离级别。
 
+### 还有哪些并发Bug
 
+上面讨论了两种隔离级别，也讨论了它们哪些并发bug，还有几个问题没有解决。
+
+#### lost updates
+
+通常是，从数据库里读取一行数据，然后根据这行数据修改某个值（比如a = a + 1，是在a的基础上+1，a = 2则不算这种case），然后更新这一行，这样的操作可以称为read-modify-write操作。
+
+以 执行a = a + 1这样的操作为例子，如果有两个事务并发进行，那么就有可能丢失其中一个事务的更新：
+
+[5]
+
+lost updates问题当然可以通过最高隔离级别的serializable避免。但还有一些比较tricky的方法的可以做：
+
+- Atomic write operations
+
+   把sql写成这样：`UPDATE counters SET value = value + 1 WHERE key = 'foo';`，在数据库里完成计算。这样的sql是原子的，但问题是，使用这样的sql，接口很难写成幂等。
+
+- Explicit locking（悲观锁）
+
+   在select语句里加入`for update`，告诉数据库你这句select语句需要等一个写锁。
+
+   一般来说，lost updates的场景总是在做这三件事：1. 读出来（select），2. 更改（change），3. 更新（update）。不难看出，对于同一条记录，这个过程是分布式互斥的，也就是同时只有一个线程能执行。所以，如果1和3之间，也就是第二步会耗时非常长的时间，使用悲观锁会有严重的性能问题。
+
+- Compare-and-set（乐观锁）
+
+   把sql写成这样：`UPDATE wiki_pages SET content = 'new content' WHERE id = 1234 AND content = 'old content';`。注意在where子句里，加入了对原来的值`content`的判断，这样如果执行这条语句时已经被修改成其他的值，这句sql会执行失败。
+
+#### write skew
+
+write skew和lost updates的场景类似，直接看例子：
+
+[6]
+
+两个事务做了同样的事，可分为三步：
+
+1. 对doctors表进行`select count(*)`操作。
+2. 根据第一步返回的结果，对doctors表进行一些修改。
+3. 执行update语句进行更新。
+
+然而，上图中的两个更新当然是race condition，因为如果两个事务顺序执行，**那么后执行的事务对`current_on_call >= 2`的判断将会是false**。
+
+write skew和lost updates场景的三步类似，只有第二步不同，它是根据query出来的结果执行特定的逻辑，再更新数据库（而lost updates场景是直接更新query出来的结果）。
+
+所以，write skew的解决方法也更加受限。乐观锁和悲观锁都不能用在这样的场景，只能使用对整个事务加锁（在第一步的select语句加上`for update`）。
+
+#### phantom
+
+phantom是write skew更诡异的变种。想想在上图的例子里，第一次`select count(*)`语句找出来的是0，那么即使加了`for update`，也锁不了任何行。那么锁就会失效。
+
+### Serializability
+
+即使在Repeatable Read的隔离级别里，还是有很多并发bug需要谨慎处理。最后再来看一个真正完全满足ACID的隔离级别：Serializability。它能真正避免所有并发问题。常见的实现有两种：
+
+#### 真正的单线程执行
+
+最简单的方法就是，真正让一个线程执行所有query。这是redis的做法。
+
+#### 2PL
+
+2PL是做这样的事：
+
+- 如果事务A读取到一行，而事务B需要写入，那么事务B必须阻塞等待事务A完成。
+- 如果事务A写入一行，而事务B需要读取，那么事务B必须阻塞等待事务A完成。
+
+它的实现是数据库的每一行都有一个锁，且这个锁有两种模式：shared mode，exclusive mode。
 
 ### 参考
 
