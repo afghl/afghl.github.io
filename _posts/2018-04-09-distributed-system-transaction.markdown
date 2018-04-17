@@ -53,13 +53,13 @@ Read Committed，提供两点保证：
 
 这两点保证可以防止脏读（dirty read）和脏写（dirty write）。
 
-[图]
+![Alt](/images/transaction-1.png)
 
 如图，User 1使用了事务写入x=3，y=3。在事务提交之前，即使set x = 3的写入已经执行，User 2读取到的还是x = 2的值。这样的case就是避免了脏读。（不就是事务的隔离性么？）
 
 脏写比脏读要复杂一些，假设这是一个事务还没提交的写入被其他事务重写了：
 
-[图]
+![Alt](/images/transaction-2.png)
 
 如图可见，两个用户Alice和Bob都执行相同的事务，当Alice对Listings表的写入在提交前就被Bob的写入覆盖了，Bob对Invoices的写入同理，最后，两个事务的写入都错误，显然不满足Consistency的。
 
@@ -69,7 +69,7 @@ Read Committed的第二点保证杜绝了脏写的问题，其实现是对写入
 
 Read Committed看上去很美好，但其实还有一些并发问题没有解决，比如：read skew：
 
-[3]
+![Alt](/images/transaction-3.png)
 
 如图所示，假设Alice总余额有1000，在Account 1和Account 2中各有500，而她读取两个账号，中间刚好执行了一次事务，那么看起来，就有100的余额不翼而飞。这样的case可以称为read skew，这在Read Committed隔离级别里是允许的，因为这个场景没有违反它提供的两点保证。但在一些场景里，这样的问题可能会导致严重后果：
 
@@ -84,7 +84,7 @@ Read Committed看上去很美好，但其实还有一些并发问题没有解决
 
 对于数据库中的一行，其实数据库内部存了多份数据，且在数据库实现内部，一次update其实会被转换为一次create + delete，**且每个事务会被分配到一个单调递增的事务id，事务不会读取到比它事务id更高的数据版本**：
 
-[4]
+![Alt](/images/transaction-4.png)
 
 Repeatable Read（可重复读）是mqsql默认的隔离级别。
 
@@ -98,7 +98,7 @@ Repeatable Read（可重复读）是mqsql默认的隔离级别。
 
 以 执行a = a + 1这样的操作为例子，如果有两个事务并发进行，那么就有可能丢失其中一个事务的更新：
 
-[5]
+![Alt](/images/transaction-5.png)
 
 lost updates问题当然可以通过最高隔离级别的serializable避免。但还有一些比较tricky的方法的可以做：
 
@@ -120,7 +120,7 @@ lost updates问题当然可以通过最高隔离级别的serializable避免。�
 
 write skew和lost updates的场景类似，直接看例子：
 
-[6]
+![Alt](/images/transaction-6.png)
 
 两个事务做了同样的事，可分为三步：
 
