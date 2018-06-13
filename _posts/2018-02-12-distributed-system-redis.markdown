@@ -43,3 +43,4 @@ redis的复制机制是典型的master-slave。
 - 《redis设计与实现(第二版)》
 - 《redis开发与运维》
 - https://redis.io/topics/introduction
+- https://stackoverflow.com/questions/31143072/redis-sentinel-vs-clustering
