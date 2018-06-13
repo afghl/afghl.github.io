@@ -18,7 +18,27 @@ tags: [distribute-system,redis]
 
 ### master-slave replication
 
-redis的复制机制是典型的master-slave。
+redis的复制机制是master-slave模型 - 对同一份数据，会有多份拷贝分布在多个节点，其中，只有一个master节点可以更新，master节点更新后，会通过一定机制使其它节点同步状态。在redis官方文档中，复制系统是通过三个机制实现：
+
+1. 在正常状态下，master会将接收到的指令传播到slave节点，使slave节点的状态同步。
+2. 当从节点发生故障，将有一段时间不可用。当从节点恢复时，会发起partial resynchronization请求，请求这段时间内，master节点执行了的所有指令，重新执行一遍，这时这个slave节点的状态又会再次同步。
+3. 当partial resynchronization不可用时，从节点会发起full resynchronization，请求完整的同步。完成之后，进入正常状态，主从之间通过指令流同步。
+
+整个机制里，值得注意的是两点：
+
+1. 在指令传播的同步场景里，是异步复制（asynchronous replication）的。
+2. partial resynchronization和full resynchronization的同步场景中，master节点是非阻塞的。
+
+#### 指令传播的实现
+
+指令传播是通过在主从节点共同维护偏移量实现的。从节点会通过每秒向主节点发送命令的方式保持心跳，命令包括：
+
+1. Replication ID - 主节点的id（集群内唯一）。
+2. offset - 从节点已经处理了指令字节偏移量。
+
+主节点会将最近执行的指令放入一个buffer中，同时维护自己已经执行的指令偏移量。从节点通过心跳的方式告诉主节点，已经执行的指令偏移量。主节点通过比较两者的差距，在buffer里偏移量差值的指令字节发送给从节点。
+
+![Alt](/images/redis-0.png)
 
 ### Sentinel
 
