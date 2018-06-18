@@ -114,7 +114,7 @@ private void lock(String requestId, List<Long> ids) {
 
     // 如果有交集，说明交集内的ids存在并发执行，这时判断为没有获得锁。
     if (!intersection.isEmpty()) {
-        throw new ServiceException();
+        throw new LockFailedException();
     }
 
 }
