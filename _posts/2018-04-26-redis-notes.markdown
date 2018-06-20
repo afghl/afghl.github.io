@@ -30,7 +30,25 @@ server端每0.1s会执行一次这几步：
 
 ### Evict
 
+redis是使用内存的缓存数据库，当内存到达上限时，会有部分的key被驱逐出键空间，即使这些key有可能没设置过期时间，驱逐的策略有这些：
 
+1. noeviction:返回错误当内存限制达到并且客户端尝试执行会让更多内存被使用的命令（大部分的写入指令，但DEL和几个例外）
+2. allkeys-lru: 尝试回收最少使用的键（LRU），使得新添加的数据有空间存放。
+3. volatile-lru: 尝试回收最少使用的键（LRU），但仅限于在过期集合的键,使得新添加的数据有空间存放。
+4. allkeys-random: 回收随机的键使得新添加的数据有空间存放。
+5. volatile-random: 回收随机的键使得新添加的数据有空间存放，但仅限于在过期集合的键。
+6. volatile-ttl: 回收在过期集合的键，并且优先回收存活时间（TTL）较短的键，使得新添加的数据有空间存放。
+
+LRU算法会淘汰那些最近最少使用（被访问时间最早的）的keys，想象有一个链表，每次一个key被访问，就将这个key置于列表的头部，那么LRU算法淘汰的就是列表尾部的keys。
+
+redis使用的算法是近似LRU算法，通过对少量keys进行取样，然后回收其中一个最好的key（被访问时间较早的）。
+
+redis4.0之后的版本新增了LFU算法：
+
+1. volatile-lfu： 尝试回收最少使用的键（LFU），但仅限于在过期集合的键。
+2. allkeys-lfu： 尝试回收最少使用的键（LFU），使得新添加的数据有空间存放。
+
+LFU算法详解可看：https://www.youtube.com/watch?v=MCTN3MM8vHA
 
 ### Transaction
 
@@ -39,3 +57,5 @@ server端每0.1s会执行一次这几步：
 - 《分布式缓存 - 从原理到实践》
 - 《redis设计与实现》
 - https://redis.io/commands/expire
+- https://redis.io/topics/lru-cache
+- https://www.youtube.com/watch?v=MCTN3MM8vHA
