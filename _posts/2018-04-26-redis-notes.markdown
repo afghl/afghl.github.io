@@ -1,5 +1,5 @@
 ---
-title:  "单机redis基础笔记"
+title:  "redis单机特性"
 date:   2018-04-26 17:58:00 +0800
 tags: [redis,data-structure]
 ---
@@ -11,6 +11,8 @@ tags: [redis,data-structure]
 
 
 ### 过期策略
+
+
 
 ### 过期实现
 
