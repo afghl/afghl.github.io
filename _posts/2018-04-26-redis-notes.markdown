@@ -52,6 +52,24 @@ LFU算法详解可看：https://www.youtube.com/watch?v=MCTN3MM8vHA
 
 ### Transaction
 
+redis是单线程的内存数据库，它支持非常弱的事务。以下是一个事务例子，它原子地增加了 foo 和 bar 两个键的值：
+
+~~~
+> MULTI
+OK
+> INCR foo
+QUEUED
+> INCR bar
+QUEUED
+> EXEC
+1) (integer) 1
+2) (integer) 1
+~~~
+
+redis的事务的实现要比传统数据库简单不少，它非常简单粗暴的实现：用执行`MULTI`命令开启一个Queue，然后将后续的命令（如：`INCR foo`、`INCR bar`）放入队列中，当执行`EXEC`命令时，将队列里的命令一起（原子性的）执行，因为是单线程的，所以所谓的原子性只是将命令批量的执行即可。
+
+正因为如此，所以redis的事务是不支持回滚的，如果出现任何一个命令错误，redis会忽略这个错误，继续执行下面的指令。
+
 ### 参考
 
 - 《分布式缓存 - 从原理到实践》
