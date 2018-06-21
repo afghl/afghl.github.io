@@ -53,11 +53,11 @@ private void executeTask(int i) {
 
 private String getLockKey(int i) {
     if (i < 10000) {
-        return "key*of*a";
+        return "key:of:a";
     } else if (i >= 10000 && i < 20000) {
-        return "key*of*b";
+        return "key:of:b";
     } else {
-        return "key*of*c";
+        return "key:of:c";
     }
 }
 ~~~
