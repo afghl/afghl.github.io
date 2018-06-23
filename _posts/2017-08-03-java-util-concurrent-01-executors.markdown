@@ -79,7 +79,6 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 `Worker`是`ThreadPoolExecutor`内部对一个线程的抽象：
 
 ~~~ java
-
 private final class Worker
         extends AbstractQueuedSynchronizer
         implements Runnable

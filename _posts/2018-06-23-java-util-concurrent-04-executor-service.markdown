@@ -123,6 +123,16 @@ private volatile int maximumPoolSize;
 
 ### ThreadPoolExecutor工作原理
 
+直接看`execute`方法和`runWorker`方法。
+
+`execute`方法可看成这几步：
+
+- 如果当前线程池线程个数小于corePoolSize则开启新线程
+- 否则添加任务到任务队列
+- 如果任务队列满了，则尝试新开启线程执行任务，如果线程个数>maximumPoolSize则执行拒绝策略。
+
+当新的worker添加到workers集合后，就是执行`runWorker`方法，runWorker方法是while循环的从队列里poll一个任务出来执行。
+
 ### 在构造线程池时有哪些常见配置
 
 看看`ThreadPoolExecutor`的构造函数：
