@@ -18,7 +18,13 @@ github_username:  afghl
 
 plugins:
   - jekyll-archives
-
+  - jekyll-paginate
+  - jekyll-sitemap
+  - jekyll-gist
+  - jekyll-feed
+  - jemoji
+  - jekyll-include-cache
+  
 # Build settings
 highlighter: rouge
 remote_theme: "mmistakes/minimal-mistakes"
