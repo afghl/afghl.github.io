@@ -90,13 +90,15 @@ start()
 
 [see in gist](https://gist.github.com/afghl/707448616df319ccaee4a72d0a24e148)
 
-你可以认为上文中的整个执行流程就是单机版MapReduce的框架，调用方如果需要使用，需要实现两个函数：`mapF`，`reduceF`，去完成不同的任务。
+你可以认为上文中的整个执行流程就是单机版MapReduce的框架，调用方如果需要使用，需要实现两个函数：`mapF`，`reduceF`，去完成不同的任务。整个执行流程如图：
+
+![Alt](/images/mapreduce.png)
 
 在单机场景中，一切都好像很简单，然后呢？
 
 ### 分布式MapReduce
 
-当从单机变成分布式环境后，情况将会变得难以想象的复杂。整个分布式MapReduce框架的魅力在于，它屏蔽了分布式系统运算和存储中棘手的问题（fault tolerance, reliability, synchronization  availability），提供简单优雅的抽象。在上层使用者的视角，还是只需要实现简单的map函数和reduce函数，然后提交并在其上运行。
+当从单机变成分布式环境后，情况将会变得难以想象的复杂。整个分布式MapReduce框架的魅力在于，它屏蔽了分布式系统运算和存储中棘手的问题（fault tolerance, reliability, synchronization  availability），提供简单优雅的抽象。在上层使用者的视角，还是只需要实现简单的map函数和reduce函数，由整个mapReduce框架保证批处理流程正确执行。
 
 最起码，会有这样的问题：
 
@@ -104,6 +106,7 @@ start()
 
 
 
-### 参考
+### ref
 - https://en.wikipedia.org/wiki/Batch_processing
 - https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf
+- https://datawhatnow.com/batch-processing-mapreduce/#:~:text=Batch%20processing%20is%20an%20automated,the%20same%20or%20different%20database.
