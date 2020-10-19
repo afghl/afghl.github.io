@@ -110,3 +110,4 @@ start()
 - https://en.wikipedia.org/wiki/Batch_processing
 - https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf
 - https://datawhatnow.com/batch-processing-mapreduce/#:~:text=Batch%20processing%20is%20an%20automated,the%20same%20or%20different%20database.
+- https://www.cnblogs.com/fydeblog/p/12826673.html
