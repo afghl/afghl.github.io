@@ -96,9 +96,50 @@ start()
 
 在单机场景中，一切都好像很简单，然后呢？
 
-### 分布式MapReduce
+### 设计分布式MapReduce
 
-当从单机变成分布式环境后，情况将会变得难以想象的复杂。整个分布式MapReduce框架的魅力在于，它屏蔽了分布式系统运算和存储中棘手的问题（fault tolerance, reliability, synchronization  availability），提供简单优雅的抽象。在上层使用者的视角，还是只需要实现简单的map函数和reduce函数，由整个mapReduce框架保证批处理流程正确执行。
+当从单机变成分布式环境后，情况将会变得难以想象的复杂。整个分布式MapReduce框架的魅力在于，它屏蔽了分布式系统运算和存储中棘手的问题（fault tolerance, reliability, synchronization，availability），提供简单优雅的抽象。在上层使用者的视角，还是只需要实现简单的map函数和reduce函数，由整个mapReduce框架保证批处理流程正确执行。
+
+我尝试根据google的mapreduce论文和MIT的6.824课程的go语言的mapreduce框架，实现一个简单的分布式mapreduce系统，看看要处理哪些问题。
+
+#### 整体架构
+
+![Alt](/images/mapreduce-2.jpg)
+
+根据google原版论文的描述，整个系统架构如图，采用的是master-worker架构，有几个点：
+1. 整个集群有两类节点，master node和worker node。
+2. master节点保存整个mapreduce job的状态，同时负责调度所有的worker节点；
+3. worker节点本身无状态，当启动一个worker节点时，它轮询地向主节点不断获取一个任务（task），有可能是map或者是reduce，获取后执行，执行成功后向报告给master，由master节点记录。
+4. 用户和集群通信只通过主节点，worker节点不能直接访问。
+
+一个核心的设计点在于单主和worker无状态化。集群状态只保存在主节点上，避免了各种一致性问题；虽然有单点问题，但主节点的work load很低（主要的负载都在worker节点），master挂掉的几率很小。同时，这样设计简化了主从间通信的复杂度（master和worker之间只要极少量语义的接口就可以完成协作）。
+
+worker无状态化同时带来了扩展性：可以很方便的增加worker机器，不需要担心各种复制，分片问题。
+
+当然，single master还是会有单点问题，具体的容错保障机制在下文中会提及。
+
+#### 状态机设计
+
+一个mapreduce job的状态由主节点记录，主节点记录整个job的状态并记录每一个task的状态，当worker请求一个task时，主节点根据这几个状态分配一个合适的任务给worker。
+
+状态机设计是关键一步，因为worker节点有可能由于各种各样的原因导致执行失败，甚至执行成功但没有报告给master。这时依赖master壮健的状态机推进来实现整个job的容错。根据论文的描述，我在实现时，使用的状态机如下：
+
+一个mapreduce任务一共有5种状态：
+- start：开始，待请求
+- map phase：在执行map任务阶段
+- map finished：map任务已执行完成，待执行reduce任务
+- reduce phase：正在执行reduce任务
+- finish：完成
+
+状态机如图：
+
+![Alt](/images/mapreduce-3.jpg)
+
+#### master和worker之间的通信协议
+
+#### fault tolerance
+
+
 
 最起码，会有这样的问题：
 
@@ -107,6 +148,7 @@ start()
 
 
 ### ref
+- 《Designing Data-Intensive Applications》
 - https://en.wikipedia.org/wiki/Batch_processing
 - https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf
 - https://datawhatnow.com/batch-processing-mapreduce/#:~:text=Batch%20processing%20is%20an%20automated,the%20same%20or%20different%20database.
