@@ -98,7 +98,7 @@ start()
 
 ### 设计分布式MapReduce
 
-当从单机变成分布式环境后，情况将会变得难以想象的复杂。整个分布式MapReduce框架的魅力在于，它屏蔽了分布式系统运算和存储中棘手的问题（fault tolerance, reliability, synchronization，availability），提供简单优雅的抽象。在上层使用者的视角，还是只需要实现简单的map函数和reduce函数，由整个mapReduce框架保证批处理流程正确执行。
+当从单机变成分布式环境后，情况将会变得复杂得多。整个分布式MapReduce框架的魅力在于，它屏蔽了分布式系统运算和存储中棘手的问题（fault tolerance, reliability, synchronization，availability），提供简单优雅的抽象。在上层使用者的视角，还是只需要实现简单的map函数和reduce函数，由整个mapReduce框架保证批处理流程正确执行。
 
 我尝试根据google的mapreduce论文和MIT的6.824课程的go语言的mapreduce框架，实现一个简单的分布式mapreduce系统，看看要处理哪些问题。
 
@@ -114,7 +114,7 @@ start()
 
 一个核心的设计点在于单主和worker无状态化。集群状态只保存在主节点上，避免了各种一致性问题；虽然有单点问题，但主节点的work load很低（主要的负载都在worker节点），master挂掉的几率很小。同时，这样设计简化了主从间通信的复杂度（master和worker之间只要极少量语义的接口就可以完成协作）。
 
-worker无状态化同时带来了扩展性：可以很方便的增加worker机器，不需要担心各种复制，分片问题。
+worker无状态化同时带来了扩展性：可以很方便的通过增加worker机器scale out，不需要担心各种复制，分片问题。
 
 当然，single master还是会有单点问题，具体的容错保障机制在下文中会提及。
 
@@ -135,17 +135,44 @@ worker无状态化同时带来了扩展性：可以很方便的增加worker机�
 
 ![Alt](/images/mapreduce-3.jpg)
 
-#### master和worker之间的通信协议
+worker节点也有状态机，是节点内部执行一个task的状态，这个状态比较简单：idle，in-progress，completed。同时，因为task是由master节点下发，所以master节点也会维护所有task的状态。
+
+#### master和worker之间的通信协议设计
+
+由于上文提及的整体架构的清晰（worker保持无状态），在google的论文描述中，master和worker之间的通信是可以做的很简单的。只有两个语义的接口。
+
+一个是worker节点向master请求一个任务，这时master根据整个mapreduce job的状态，可能有三种response：1. 分配一个map task任务； 2. 分配一个reduce task任务； 3. 不分配任务，告诉worker进入idle状态。master分配后会将当前的任务状态记录下来（idle -> in-progress）。
+
+当worker完成任务后，将中间结果写在文件系统（在google的实现是分布式文件系统，GFS）中，然后记录文件路径，并将完成情况上报给master，由master记录这个task的状态和这个intermediate文件名。同时，当worker完成任务后，会进入idle状态，此时隔一段时间向master轮询任务。
+
+总结下来，master需要提供这两个语义的接口给worker节点：
+
+1. `task get_task(worker)`
+2. `report_task(task, execute_result)`
+
+当然，在工业实现上，为了容错可能会做的更复杂，比如worker和master之间的心跳机制；或者允许集群重启恢复的check point机制。整体容错机制在下一节中详述。
 
 #### fault tolerance
 
+一个mapreduce任务可能需要成百上千个节点共同完成。所以整个集群必须有简单优雅的容错机制。
 
+一个最常见的failure是worker节点挂掉或者和master节点的通信出现问题。mapreduce会引入master-worker之间的心跳机制，当master ping了之后收不到worker的回复，会认为worker已经挂掉，并将这个task状态更新为idle。
 
-最起码，会有这样的问题：
+同时mapreduce是单主的集群，怎么对master节点的不可用做容错呢？一个做法是定期对master状态做check point，这个状态可以落盘到分布式文件系统中，下次启动时，读取check point继续任务。
 
-当数据量大时，还会有这样的问题：
+#### 代码解释
 
+了解整个系统架构和机制后，尝试做一个简单的实现。MIT的6.824提供一个的lab，可以基于这个框架一个go语言的最简版实现。关于课程的描述，可以看这里：https://pdos.csail.mit.edu/6.824/labs/lab-mr.html，只需要一个go runtime就可以做了，下面是主要代码：
 
+Master节点：
+
+Worker节点：
+
+然后是上文提到的master节点提供给worker节点的第一个接口，获取一个task：`CreateTask`，master根据当前job的状态分配一个task给worker：
+
+worker获取task之后，根据taskType（map / reduce）执行不同的func：
+
+完成后，worker调用report接口通知master，master收到后记录状态，并同步更新整个job的状态：
 
 ### ref
 - 《Designing Data-Intensive Applications》
