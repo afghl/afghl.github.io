@@ -164,11 +164,194 @@ worker节点也有状态机，是节点内部执行一个task的状态，这个�
 
 了解整个系统架构和机制后，尝试做一个简单的实现。MIT的6.824提供一个的lab，可以基于这个框架一个go语言的最简版实现。关于课程的描述，可以看这里：https://pdos.csail.mit.edu/6.824/labs/lab-mr.html，只需要一个go runtime就可以做了，下面是主要代码：
 
-Master节点：
+##### Master节点
 
-Worker节点：
+master节点的状态结构：
 
-然后是上文提到的master节点提供给worker节点的第一个接口，获取一个task：`CreateTask`，master根据当前job的状态分配一个task给worker：
+~~~ go
+type JobState int
+
+const (
+	Start JobState = 0
+	MapPhase JobState = 1
+	MapFinished JobState = 2
+	ReducePhase JobState = 3
+	Finish JobState = 4
+)
+
+type Master struct {
+	// Your definitions here.
+	State JobState // current state of a mapreduce job.
+	Files []string // file names.
+	MapTaskStates map[int]TaskState // states of each map task 0=not start, 1=in progress, 2=finished.
+	ReduceTaskStates map[int]TaskState // states of each reduce task.
+	NReduce int
+	NMap int
+}
+~~~
+
+然后是创建master节点的入口：
+
+~~~ go
+func MakeMaster(files []string, nReduce int) *Master {
+	m := Master{}
+
+	// master节点需要保存的状态：
+	// 文件名字
+	// 当前阶段
+	// map阶段：有哪几个文件已经被处理，哪几个文件未被处理
+	// map的intermediate文件的元信息
+	// 每个task的状态
+	m.Files = files
+  m.State = Start
+
+	// init map task state
+	m.MapTaskStates = make(map[int]TaskState)
+	m.ReduceTaskStates = make(map[int]TaskState, nReduce)
+	for i, _ := range m.Files {
+		m.MapTaskStates[i] = Idle
+	}
+
+	m.NReduce = nReduce
+	m.NMap = len(files)
+	m.server()
+	return &m
+}
+~~~
+
+这是启动一个master的入口，是lab里面提供的模板代码，需要实现者填充代码。入参是两个：文件名路径数组，和指定reduce任务的数量。然后初始化master节点一系列初始状态，包括map任务和reduce状态的两个map，整个Job的状态。最后的`m.server()`由框架实现，打开tcp端口监听来自worker节点的rpc调用。
+
+如前文所说，master节点需要提供两个api，一个是创建任务`CreateTask`，一个是提供给worker节点汇报任务完成情况`ReportTask`：
+
+~~~ go
+func (m *Master) CreateTask(args *NoArgs, reply *Task) error {
+	if m.State == Start || m.State == MapPhase {
+		mapID := -1
+
+		for i, taskState := range m.MapTaskStates {
+			if taskState == Idle {
+				mapID = i
+				m.MapTaskStates[i] = InProgress
+			}
+		}
+		reply.MapFileName = m.Files[mapID]
+		reply.Type = Map
+		// map id is simply the index of the file array
+		reply.MapID = mapID
+		reply.ReduceID = 0
+		reply.NReduce = m.NReduce
+		reply.NMap = m.NMap
+
+		// update state
+		m.State = MapPhase
+	} else if m.State == MapFinished || m.State == Finish {
+		reduceId := -1
+
+		for i, taskState := range m.ReduceTaskStates {
+			if taskState == Idle {
+				reduceId = i
+				m.ReduceTaskStates[i] = InProgress
+			}
+		}
+		reply.Type = Reduce
+		reply.MapID = 0
+		reply.ReduceID = reduceId
+		reply.NReduce = m.NReduce
+		reply.NMap = m.NMap
+
+		// update states
+		m.State = ReducePhase
+	}
+
+
+	return nil
+}
+~~~
+
+这里下发task的策略是根据master当前状态判断应该下发map任务还是reduce任务。然后找到一个未执行（状态为Idle）的任务，下发给worker。（如果是map任务，还会把对应的fileName下发）。最后更新状态位。关于一个task的结构，下文中会提及。
+
+然后是`ReportTask`，这个接口会在worker完成任务后调用：
+
+~~~ go
+func (m *Master) ReportTask(args *NoArgs, task *Task) error {
+	fmt.Printf("Master.Inspect is called.")
+	mapID := -1
+
+	// update task states
+	if task.Type == Map {
+		m.MapTaskStates[task.MapID] = task.TaskState
+	} else if task.Type == Reduce {
+		m.ReduceTaskStates[task.ReduceID] = task.TaskState
+	}
+
+	allFinish := true
+	// update job state if needed
+	if task.Type == Map && task.TaskState == Completed {
+		for id := 0; id < m.NMap; id++ {
+			if m.MapTaskStates[id] != Completed {
+				allFinish = false
+				break
+			}
+		}
+		if allFinish {
+			m.State = MapFinished
+		}
+	} else if task.Type == Reduce && task.TaskState == Completed {
+		for id := 0; id < m.NReduce; id++ {
+			if m.ReduceTaskStates[id] != Completed {
+				allFinish = false
+				break
+			}
+		}
+		if allFinish {
+			m.State = Finish
+		}
+	}
+
+	return nil
+}
+~~~
+
+master的`ReportTask`接口主要就是更新task状态和job状态。代码也比较简单。
+
+##### Worker节点
+
+worker节点启动后，会定期轮询master节点获得一个task，因为worker已经去状态化，所以在整个worker生命周期里，可以执行多个task。先来看看Task结构的定义：
+
+~~~ go
+type TaskType int
+type TaskState int
+
+const (
+  Map TaskType = 0
+  Reduce TaskType = 1
+)
+
+const (
+	Idle TaskState = 0
+	InProgress TaskState = 1
+	Completed TaskState = 2
+)
+
+type Task struct {
+  Type TaskType
+  TaskState TaskState
+  NReduce int  // reduce tasks count
+	NMap int  // map tasks count
+
+  Mapf func(string, string) []KeyValue // map function
+	Reducef func(string, []string) string // reduce function
+
+  // map task require info
+  MapFileName string // the input filename that for a map task
+  MapID int // map task id
+
+	// reduce task require info
+	ReduceID int
+}
+~~~
+
+其中，Mapf和Reducef是用户指定的map和reduce函数，由调用方实现
 
 worker获取task之后，根据taskType（map / reduce）执行不同的func：
 
