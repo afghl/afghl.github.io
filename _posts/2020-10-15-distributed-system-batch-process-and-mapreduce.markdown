@@ -261,6 +261,8 @@ func (m *Master) CreateTask(args *NoArgs, reply *Task) error {
 
 		// update states
 		m.State = ReducePhase
+	} else if m.State == Finish {
+		reply.TaskType = Stop
 	}
 
 
@@ -316,7 +318,7 @@ master的`ReportTask`接口主要就是更新task状态和job状态。代码也�
 
 ##### Worker节点
 
-worker节点启动后，会定期轮询master节点获得一个task，因为worker已经去状态化，所以在整个worker生命周期里，可以执行多个task。先来看看Task结构的定义：
+worker节点启动后，会定期轮询master节点获得一个task然后执行，先来看看Task结构的定义：
 
 ~~~ go
 type TaskType int
@@ -351,11 +353,117 @@ type Task struct {
 }
 ~~~
 
-其中，Mapf和Reducef是用户指定的map和reduce函数，由调用方实现
+~~~ go
+func Worker(mapf func(string, string) []KeyValue,
+	reducef func(string, []string) string) {
 
-worker获取task之后，根据taskType（map / reduce）执行不同的func：
+	for {
+		task := GetTask()
+		if task.TaskType == Stop {
+			break
+		}
+
+		task.Mapf = mapf
+		task.Reducef = reducef
+
+		task.Execute()
+		ReportTask(task)
+
+		time.Sleep(30 * time.Millisecond)
+	}
+}
+~~~
+
+因为worker已经去状态化，所以在整个worker生命周期里，可以执行多个task。其中，Mapf和Reducef是用户指定的map和reduce函数，由调用方实现，worker从master节点获取到task之后，会根据taskType（Map / Reduce）执行不同的func：
+
+~~~ go
+func (t *Task) Execute() bool {
+  if t.Type == Map {
+    t.doMap()
+  } else {
+    t.doReduce()
+  }
+
+	t.TaskState = Completed
+  return true
+}
+~~~
+
+这里重点是map function和reduce function的执行：
+
+~~~ go
+func (t *Task) doMap() bool {
+  fmt.Printf("Task.map Execute, fileName: %s", t.MapFileName)
+  file, _ := os.Open(t.MapFileName)
+	content, _ := ioutil.ReadAll(file)
+	file.Close()
+	kvs := t.Mapf(t.MapFileName, string(content))
+	intermediate := make([][]KeyValue, t.NReduce, t.NReduce)
+	for _, kv := range kvs {
+		idx := ihash(kv.Key) % t.NReduce
+		intermediate[idx] = append(intermediate[idx], kv)
+	}
+
+	for idx := 0; idx < t.NReduce; idx++ {
+		intermediateFileName := fmt.Sprintf("mr-%d-%d", t.MapID, idx)
+		file, _ = os.Create(intermediateFileName)
+		data, _ := json.Marshal(intermediate[idx])
+		_, _ = file.Write(data)
+		file.Close()
+	}
+	return true
+}
+~~~
+
+doMap就是读取相应的文件，调用MapF生成K-V对，然后根据哈希函数得到要将当前key分配到哪一块中，总共有NReduce块，最后根据这么块生成对应map以及reduce块的intermediateFile。比如一个MapID为0的map task，nReduce为3，最后生成3个文件：mr-0-0，mr-0-1，mr-0-2。
+
+接下来是reduce，会从intermediateFile里读取出内容，然后将所有key-value对聚合起来，然后调用reduceF获得最后结果，写入到mr-out文件：
+
+~~~ go
+func (t *Task) doReduce() bool {
+  fmt.Printf("Task.doReduce execute")
+	kvsReduce := make(map[string][]string)
+	for idx := 0; idx < t.NMap; idx++ {
+		intermediateFileName := fmt.Sprintf("mr-%d-%d", idx, t.ReduceID)
+		file, _ := os.Open(intermediateFileName)
+		content, _ := ioutil.ReadAll(file)
+		file.Close()
+		kvs := make([]KeyValue, 0)
+		_ = json.Unmarshal(content, &kvs)
+		for _, kv := range kvs {
+			_, ok := kvsReduce[kv.Key]
+			if !ok {
+				kvsReduce[kv.Key] = make([]string, 0)
+			}
+			kvsReduce[kv.Key] = append(kvsReduce[kv.Key], kv.Value)
+		}
+	}
+	result := make([]string, 0)
+	for key, val := range kvsReduce {
+		result = append(result, fmt.Sprintf("%v %v\n", key, t.Reducef(key, val)))
+	}
+
+	outFileName := fmt.Sprintf("mr-out-%d", t.ReduceID)
+	ioutil.WriteFile(outFileName, []byte(strings.Join(result, "")), 0644)
+  return true
+}
+~~~
 
 完成后，worker调用report接口通知master，master收到后记录状态，并同步更新整个job的状态：
+
+~~~ go
+// report a task after its execute
+func ReportTask(task Task) bool {
+	args := NoArgs{}
+
+	call("Master.ReportTask", &args, &task)
+	return true
+}
+~~~
+
+最后总结一下，在整个实现上，我处理得比较简单，一是没有考虑处理过程出错和worker节点不可用的容错逻辑，二是当前仅考虑map和reduce任务是在同一个节点上运行的（在实际情况中不可能发生），所以不需要考虑移动文件所需要的网络开销；同时没有考虑go语言的一些特性。
+
+本文主要是想介绍mapReduce的架构设计的思想，并通过简单的实现，重温一下分布式系统设计所需要考虑的各种问题。
 
 ### ref
 - 《Designing Data-Intensive Applications》
