@@ -10,6 +10,8 @@ tags: [distribute-system,redis,distibuted-lock]
 public void executeInRedisLock(String lockKey) {
     try (redisLock.lock(lockKey)) {
         executeTask();
+    } finally {
+      redisLock.unlock(lockKey)
     }
 }
 
