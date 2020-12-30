@@ -81,7 +81,9 @@ public class TransferServiceImpl implements TransferService {
 
 
 整个建模过程简化为两步：从结合一些大厂案例，和我们的实际场景，结合当前已有的表结构，梳理出可以支撑当前场景的一套领域对象和聚合。然后进行回测：看看这一套模型能不能支持所有use case，和评估实现复杂度。最后收敛出领域建模：
-![image.png](https://cdn.nlark.com/yuque/0/2020/png/1727977/1609307024418-a3e2152a-b642-428c-94f4-b19501a65c0d.png#align=left&display=inline&height=395&margin=%5Bobject%20Object%5D&name=image.png&originHeight=790&originWidth=830&size=90926&status=done&style=none&width=415)
+
+![Alt](/images/ddd-refactor-1.png)
+
 #### 确定聚合
 聚合在ddd里是一个有力的抽象，建立好准确的聚合后，事半功倍。我们先来回顾下聚合的定义和约束：
 
@@ -192,13 +194,13 @@ class ProductSku {
 ```
 在提取了entity实体，aggregate聚合，domain primitive之后，我们的关注点就是领域逻辑，而非表的crud。
 
-
 但还有一步，怎么强制让大家将思维扭转过来，不在事务脚本的思考维度实现接口和需求？答案在下一点：repository。
 
-
 #### repository：彻底封装底层存储细节
+
 这一步最重要，它能彻底扭转我们想要写Transaction Script的心智。我们看看类图，对于单一对象而言，整个类和包结构就如下图：
-![image.png](https://cdn.nlark.com/yuque/0/2020/png/1727977/1609293833093-d49dd3a3-d005-471c-8091-1ebbb01783c5.png#align=left&display=inline&height=415&margin=%5Bobject%20Object%5D&name=image.png&originHeight=830&originWidth=776&size=49684&status=done&style=none&width=388)
+
+![Alt](/images/ddd-refactor-2.png)
 
 
 repository类只暴露少量的方法，而且直接返回领域对象，不会返回PO：
@@ -372,11 +374,13 @@ public class ModelDiffer<T extends Entity> {
 
 #### 应用架构
 完成领域层和持久化层的搭建后，我们的应用架构已经梳理出来。我以商品聚合为例，用类图的话表达如下：
-![image.png](https://cdn.nlark.com/yuque/0/2020/png/1727977/1609299363444-916bd619-7469-4856-9ab2-7a7f55b4fe3a.png#align=left&display=inline&height=687&margin=%5Bobject%20Object%5D&name=image.png&originHeight=1374&originWidth=1434&size=158503&status=done&style=none&width=717)
 
+![Alt](/images/ddd-refactor-3.png)
 
 用一个比较抽象的六边形图的话，是这样的：
-![image.png](https://cdn.nlark.com/yuque/0/2020/png/1727977/1609304937321-38df40aa-f6ca-4e62-a343-ccb9ec1989ac.png#align=left&display=inline&height=260&margin=%5Bobject%20Object%5D&name=image.png&originHeight=279&originWidth=448&size=42944&status=done&style=none&width=418)
+
+![Alt](/images/ddd-refactor-4.png)
+
 你已经看到，这个应用架构的核心思想是屏蔽所有外部依赖，包括持久层的实现、上下游依赖、中间件依赖（redis、mq）。从而获得一个稳定的领域层。
 
 
