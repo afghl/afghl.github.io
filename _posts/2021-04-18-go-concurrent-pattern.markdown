@@ -1,5 +1,5 @@
 ---
-title:  "Golang学习（1） - Go并发模式"
+title:  "Golang并发（1） - Goroutine和调度"
 date:   2021-04-18 15:13:00 +0800
 tags: [go,golang,concurrent,pattern,goroutine,channel]
 ---
@@ -163,28 +163,19 @@ P *allp; // [GOMAXPROCS]
 当MO返回时，它必须尝试取得一个context P来运行goroutine，一般情况下，它会从其他的OS线程那里steal偷一个context过来，
 如果没有偷到的话，它就把goroutine放在一个global runqueue里，然后自己就去睡大觉了（放入线程缓存里）。Contexts们也会周期性的检查global runqueue，否则global runqueue上的goroutine永远无法执行。
 
+G和M通过P实现了n:m的映射，也就是说一个G有可能由不同的OS线程运行，这都由P进行调度。
+
 #### 协程生命周期
 
+不同于java里面的线程生命周期那么划分仔细，goroutine只有三个high-level的生命周期：Waiting, Runnable, Executing。
 
+- Waiting：这意味着Goroutine已停止，正在等待某些东西才能继续。这可能是由于诸如等待操作系统（系统调用）或同步调用（原子和互斥操作）之类的原因。 这些类型的延迟是导致性能下降的根本原因。
+- Runnable：表示Goroutine可以执行指令，正在等待M去执行它。所以此时这个goroutine可能在P的队列里，也可能在global队列里。如果有很多需要时间的Goroutine，那么它们必须等待更长的时间。 而且，随着更多Goroutine争夺时间，任何给定Goroutine所获得的时间都将缩短。 这种类型的调度等待时间也可能是导致性能下降的原因。
+- Executing：这意味着Goroutine已放置在M上并正在执行其指令。
 
 #### 可观测
 
-golang里有类似jstack的命令观察整个进程的协程运行情况。
-
-### channel
-
-### context
-
-### 重构并发
-
-
-#### pub sub
-
-###多个交替打印
-
-#### 并发度控制
-
-一般而言不需要管理和控制goroutine的并发度。但如果每个goroutine做的事情对下游有依赖，且对下游较大，为了避免把下游瞬间打挂，还是需要控制goroutine执行的最大并行数。具体而言，可以见demo
+golang里有类似jstack的命令对整个进程进行profiling。 -- pprof
 
 ### ref
 - 《Concurrency in Go》
@@ -197,3 +188,5 @@ golang里有类似jstack的命令观察整个进程的协程运行情况。
 - https://morsmachine.dk/go-scheduler
 - https://docs.google.com/document/d/1TTj4T2JO42uD5ID9e89oa0sLKhJYD0Y_kqxDv3I3XMw/edit#
 - http://www.cs.columbia.edu/~aho/cs6998/reports/12-12-11_DeshpandeSponslerWeiss_GO.pdf
+- https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html#:~:text=Goroutine%20States&text=Waiting%3A%20This%20means%20the%20Goroutine,root%20cause%20for%20bad%20performance.
+-
