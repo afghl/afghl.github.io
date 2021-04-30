@@ -9,9 +9,11 @@ tags: [go,golang,concurrent,pattern,goroutine,channel]
 golang社区有一句流行语：不要通过共享内存来通信，要通过通信来共享内存。实际上背后的理论基础就是[CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes)模型。channel就是对此的实现。
 
 
-channel 提供了一种通信机制，通过它，一个 goroutine 可以想另一 goroutine 发送消息。channel 本身还需关联了一个类型，也就是 channel 可以发送数据的类型。例如: 发送 int 类型消息的 channel 写作 chan int 。
+channel 提供了一种通信机制，通过它，一个 goroutine 可以向另一 goroutine 发送消息。channel 本身还需关联了一个类型，也就是 channel 可以发送数据的类型。例如: 发送 int 类型消息的 channel 写作 chan int 。
 
 ### 用法
+
+channel有自己的语法糖，下面是最简单的一个代码段：
 
 ``` go
 func sender(a chan int) {
@@ -54,7 +56,81 @@ received... 9
 
 ### channel数据结构
 
+要理解channel，需要理解其实对channel的操作的语法，只是一个语法糖。而底层支持的还是很容易理解的数据结构+算法。
 
+我们可以看到对同一个channel的操作存在一定的同步和互斥。可以类比一下java是怎么实现线程同步的。AQS是java并发工具里的同步器，它里面的数据结构其实就三个部件组成：
+
+1. 一个int标记位，标记当前锁是不是被持有。
+2. 一个FIFO的队列，里面排队的是所有等待这个锁的线程，全部是阻塞态。
+3. 保存一个指针，记录当前获得锁的线程。
+
+channel做的事情不是同步，而是在goroutine之间传递数据，所以也会有一个数据的FIFO的队列。另外，对channel的操作也可能阻塞和唤起goroutine。所以也有类似于java里面的AQS的同步器。channel的数据结构如下：
+
+``` go
+type hchan struct {
+	qcount   uint           // total data in the queue
+	dataqsiz uint           // size of the circular queue
+	buf      unsafe.Pointer // points to an array of dataqsiz elements
+	elemsize uint16
+	closed   uint32
+	elemtype *_type // element type
+	sendx    uint   // send index
+	recvx    uint   // receive index
+	recvq    waitq  // list of recv waiters
+	sendq    waitq  // list of send waiters
+
+	// lock protects all fields in hchan, as well as several
+	// fields in sudogs blocked on this channel.
+	//
+	// Do not change another G's status while holding this lock
+	// (in particular, do not ready a G), as this can deadlock
+	// with stack shrinking.
+	lock mutex
+}
+```
+
+构成channel由几个部件组成：
+- buf，保存channel的元素的一个数组。
+- recvq，receiver的队列。
+- sendq，sender的队列。
+- lock，一个互斥器，对channel的访问需要互斥。
+
+理解了这个数据结构之后，我们可以理解，当向一个channel执行send操作（`<-`）的时候，底层的数据结构会发生什么：
+
+1. 当前goroutine会尝试获得锁
+2. 将要传输的数据在内存中 **copy一份**，然后塞入buf数组中
+3. 释放锁
+
+执行recv操作时，就是一个相反的过程，在获得锁后，将buf数组里面的内容copy一份，然后当前goroutine的指针指向这个copy出来的对象，并在buf数组里移除掉这个数据。
+
+所以，当一个goroutine通过channel获取到另一个goroutine的数据，其实在内存中经过最多两次的copy，在整个过程中并没有共享内存。这样是为了避免各种并发修改同一个内存的问题。
+
+当然，channel的作用并不仅限于数据传输，它的最大的威力在于，我们在使用channel来转移一份数据的使用权，而相关的goroutine的执行和阻塞，由底层实现。当向一个已经满了的channel执行send操作时，这个操作会阻塞当前的goroutine：
+
+``` go
+ch := make(chan int, 2)
+ch <- 1
+ch <- 2
+ch <- 3  // block...
+```
+
+底层如何实现阻塞，后面又是怎么实现唤起？答案是和AQS很类似的机制：
+
+当hchan的数据满了后（c.qcount == c.dataqsiz），再收到send操作，会将这个goroutine连同它要发送的内存一起封装起来，保存到一个队列里（sendq），然后在执行挂起。
+
+![Alt](/images/go-chan-1.png)
+
+挂起是请求scheduler实现的，可以抽象的理解为：将当前的g的状态置为Waiting，然后调度的时候scheduler就会将这个g和M解开关联，然后将这个g加入到其中一个p的队列中。
+
+所以，当一个channel满了的时候，可以理解为这样：
+
+![Alt](/images/go-chan-2.jpg)
+
+此时，当有另一个goroutine过来对这个已经满了的channel执行recv操作，会做几件事：
+
+1. 从buf里出队一个ele，并copy出来给这个goroutine。
+2. 从sendq里，找到第一个阻塞的sudog（hchan内部对协程的封装）并出队。
+3. 唤醒这个协程，并将它的elem入队到buf队列里。
 
 ### context
 
