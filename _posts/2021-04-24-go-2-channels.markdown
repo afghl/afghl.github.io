@@ -134,6 +134,8 @@ ch <- 3  // block...
 
 ### context
 
+
+
 ### 重构并发
 
 
@@ -141,10 +143,46 @@ ch <- 3  // block...
 
 ###多个交替打印
 
+
+
 #### 并发度控制
 
-一般而言不需要管理和控制goroutine的并发度。但如果每个goroutine做的事情对下游有依赖，且对下游较大，为了避免把下游瞬间打挂，还是需要控制goroutine执行的最大并行数。具体而言，可以见demo
+一般而言不需要管理和控制goroutine的并发度。但如果某些goroutine做的事情对下游有依赖，且对下游的资源消耗较大，为了避免把下游瞬间打挂，还是需要控制goroutine执行的最大并行数。
 
+在java里最简单的方法就是使用线程池，只要设置core和max的线程数，控制了实际执行的最大线程数，再多的任务提交过来也会在队列里等待，在go里面，我们没必要直接做goroutine的线程池，而是使用channel简单实现一个concurreny limiter作为限流器。
+
+``` go
+type RateLimiter struct {
+	tickets chan int
+}
+
+func GetLimiter(limit int) *rateLimiter {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	tickets := make(chan int, limit)
+	for i := 1; i <= limit; i++ {
+		tickets <- i
+	}
+
+	return &RateLimiter{tickets: tickets}
+}
+
+func (r *RateLimiter) Exec(f func()) {
+	ticket := <-r.tickets
+
+	go func() {
+		defer func() {
+			r.tickets <- ticket
+		}()
+		f()
+	}()
+}
+```
+
+这里相当于把channel当成一个synchronizer来使用，`<-r.tickets` 有可能阻塞线程。这里需要注意的是，当限流器没容量（ticket全部占用），那么Exec方法会阻塞在原地（当前线程）。
 
 ### ref
 - https://www.youtube.com/watch?v=KBZlN0izeiY&t=66s
+- https://zhuanlan.zhihu.com/p/110085652
