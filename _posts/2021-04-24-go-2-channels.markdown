@@ -1,5 +1,5 @@
 ---
-title:  "Golang并发（2） - channel用法和实现"
+title:  "Golang并发（2） - channel与context的用法和实现"
 date:   2021-04-24 15:20:00 +0800
 tags: [go,golang,concurrent,pattern,goroutine,channel]
 ---
@@ -134,16 +134,96 @@ ch <- 3  // block...
 
 ### context
 
+context包是goroutine之间互相管理的工具。golang是面向分布式、rpc server的编程语言。一个web server的典型场景是节点接收到上游的请求request，然后处理过程中，需要创建一些额外的goroutine，并行请求下游数据（通常是阻塞操作）。这时候，如果一个request被cancel或者time out，那么它派生的goroutines也应该快速失败掉，返回err并释放资源，context就是为了处理这种场景而产生的工具。
 
+> The sole purpose of the context package is to carry out the cancellation signal across goroutines no matter how they were spawned, context got them covered.
+
+context的接口：
+
+```go
+type Context interface {
+    // Done returns a channel that is closed when this Context is canceled
+    // or times out.
+    Done() <-chan struct{}
+
+    // Err indicates why this context was canceled, after the Done channel
+    // is closed.
+    Err() error
+
+    // Deadline returns the time when this Context will be canceled, if any.
+    Deadline() (deadline time.Time, ok bool)
+
+    // Value returns the value associated with key or nil if none.
+    Value(key interface{}) interface{}
+}
+```
+
+- `Deadline` 返回绑定当前context的任务被取消的截止时间；如果没有设定期限，将返回ok == false。
+- `Done` 当绑定当前context的任务被取消时，将返回一个关闭的channel；如果当前context不会被取消，将返回nil。
+- `Err` 如果Done返回的channel没有关闭，将返回nil;如果Done返回的channel已经关闭，将返回非空的值表示任务结束的原因。如果是context被取消，Err将返回Canceled；如果是context超时，Err将返回DeadlineExceeded。
+- `Value` 返回context存储的键值对中当前key对应的值，如果没有对应的key,则返回nil。
+
+我们来看一个典型的应用：
+
+``` go
+func main() {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	result := make(chan int, 0)
+	asyncDoStuffWithTimeout(ctx, result)
+	fmt.Printf("restult get: %v", <-result)
+}
+
+func asyncDoStuffWithTimeout(ctx context.Context, result chan int) {
+	go func() {
+		select {
+		case <-ctx.Done():
+			fmt.Printf("ctx is done, %v", ctx.Err())
+			result <- 0
+			return
+		case <-time.After(2 * time.Second):
+			fmt.Println("set result")
+			result <- 10
+		}
+	}()
+}
+```
+
+实例中我们go了一个协程，执行一个，它会通过select case语句感知ctx是否已经关闭，如果是已经关闭，则会直接return。
 
 ### 重构并发
 
+以几个例子展示怎么使用go里面的channel通道重构我们的并发编程模型。
 
-#### pub sub
+### ping pong
 
-###多个交替打印
+这个是Advanced Go Concurrency Patterns上的一个例子，两个线程通过chan交换一个struct的使用权
 
+``` go
+type Ball struct {
+	hits int
+}
 
+func main() {
+	ball := Ball{}
+	table := make(chan Ball)
+	go play("ping", table)
+	go play("pong", table)
+	table <- ball
+	time.Sleep(2 * time.Second)
+}
+
+func play(name string, table chan Ball)  {
+	for {
+		ball := <-table
+		ball.hits++
+		fmt.Printf("%v: hit %v\n", name, ball.hits)
+		time.Sleep(300 * time.Millisecond)
+		table <- ball
+	}
+}
+```
 
 #### 并发度控制
 
@@ -186,3 +266,8 @@ func (r *RateLimiter) Exec(f func()) {
 ### ref
 - https://www.youtube.com/watch?v=KBZlN0izeiY&t=66s
 - https://zhuanlan.zhihu.com/p/110085652
+- https://blog.golang.org/io2013-talk-concurrency
+- https://studygolang.com/articles/23247?fr=sidebar
+- https://blog.golang.org/context
+- https://medium.com/rungo/understanding-the-context-package-b2e407a9cdae
+- https://www.youtube.com/watch?v=QDDwwePbDtw&t=515s
