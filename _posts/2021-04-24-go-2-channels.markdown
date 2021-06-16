@@ -196,7 +196,7 @@ func asyncDoStuffWithTimeout(ctx context.Context, result chan int) {
 
 以几个例子展示怎么使用go里面的channel通道重构我们的并发编程模型。
 
-### ping pong
+#### ping pong
 
 这个是Advanced Go Concurrency Patterns上的一个例子，两个线程通过chan交换一个struct的使用权
 
@@ -262,6 +262,113 @@ func (r *RateLimiter) Exec(f func()) {
 ```
 
 这里相当于把channel当成一个synchronizer来使用，`<-r.tickets` 有可能阻塞线程。这里需要注意的是，当限流器没容量（ticket全部占用），那么Exec方法会阻塞在原地（当前线程）。
+
+
+#### pub sub using channel
+
+使用go channel实现pub sub pattern
+
+``` go
+
+//Message struct
+type Message struct {
+	Topic string
+	Value interface{}
+}
+
+//Channel struct
+type Channel struct {
+	ch chan Message
+}
+
+//Mq struct
+type Mq struct {
+	topics map[string]*Channel
+}
+
+// var sessions map[string][]Session
+
+//New func
+func New() *Mq {
+	return &Mq{
+		topics: map[string]*Channel{},
+	}
+}
+
+//Subscribe method
+func (s *Mq) Subscribe(topic string, handler func(m *Message), concurrency int) error {
+	if concurrency <= 0 {
+		return errors.New("concurrency less than 0")
+	}
+
+	// generate topic if not exist
+	if _, exist := s.topics[topic]; exist {
+		return errors.New(("Subscribe exist, topic:" + topic))
+	}
+
+	s.topics[topic] = &Channel{
+		ch: make(chan Message),
+	}
+
+	for concurrency >= 0 {
+		go func() {
+			for {
+				c := <-s.topics[topic].ch
+				handler(&c)
+			}
+		}()
+		concurrency = concurrency - 1
+	}
+
+	return nil
+}
+
+//Publish method
+func (s *Mq) Publish(msg Message) error {
+	if _, ok := s.topics[msg.Topic]; !ok {
+		return errors.New("Topic has been closed")
+	}
+
+	s.topics[msg.Topic].ch <- msg
+
+	return nil
+}
+
+```
+
+这里每个topic使用一个channel来实现publisher和subsriber的通信，可以看到每个subsriber都是一个goroutine，会for循环监听这个topic下的channel，当有channel ready的时候，唤醒这个goroutine。在publish的时候，如果所有subsriber都正忙，会阻塞线程。
+
+用法如下：
+
+``` go
+func main() {
+	mq := New()
+
+	mq.Subscribe("topic1", func(m *Message) {
+
+		time.Sleep(1 * time.Second) // 模拟处理耗时
+		fmt.Printf("get msg: topic: %v message: %v \n", m.Topic, m.Value.(string))
+	}, 100)
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Millisecond)
+		start := time.Now()
+		for {
+			select {
+			case <-ticker.C:
+				mq.Publish(Message{
+					Topic: "topic1",
+					Value: fmt.Sprintf("message: %v time pass...", time.Since(start)),
+				})
+			}
+		}
+	}()
+
+	time.Sleep(20 * time.Second)
+
+}
+
+```
 
 ### ref
 - https://www.youtube.com/watch?v=KBZlN0izeiY&t=66s
