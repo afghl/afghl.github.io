@@ -4,7 +4,7 @@ date:   2021-04-24 15:20:00 +0800
 tags: [go,golang,concurrent,pattern,goroutine,channel]
 ---
 
-除了goroutine之外，channel 是 golang 中最核心的 feature 之一，因此理解 Channel 的原理对于学习和使用 golang 非常重要。
+除了goroutine之外，channel 是 golang 中最核心的 feature 之一，因此理解 Channel 的原理对于学习和使用 golang 也很重要。
 
 golang社区有一句流行语：不要通过共享内存来通信，要通过通信来共享内存。实际上背后的理论基础就是[CSP](https://en.wikipedia.org/wiki/Communicating_sequential_processes)模型。channel就是对此的实现。
 

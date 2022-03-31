@@ -157,7 +157,7 @@ P *allp; // [GOMAXPROCS]
 
 另一项优化是它避免了一个G在系统调用时会产生过多开销，具体的做法是：引入了P之后，G不直接和M关联，而是加入到P的队列里面，当线程M需要阻塞时，整个P就和这个被阻塞的M摘除，然后整个P挂到其他的线程上，就像这样：
 
-![Alt](/images/go-1-sc.png)
+![Alt](/images/go-1-sc.jpeg)
 
 > 图中的M1可能是被创建，或者从线程缓存中取出。
 当MO返回时，它必须尝试取得一个context P来运行goroutine，一般情况下，它会从其他的OS线程那里steal偷一个context过来，
@@ -188,5 +188,4 @@ golang里有类似jstack的命令对整个进程进行profiling。 -- pprof
 - https://morsmachine.dk/go-scheduler
 - https://docs.google.com/document/d/1TTj4T2JO42uD5ID9e89oa0sLKhJYD0Y_kqxDv3I3XMw/edit#
 - http://www.cs.columbia.edu/~aho/cs6998/reports/12-12-11_DeshpandeSponslerWeiss_GO.pdf
-- https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html#:~:text=Goroutine%20States&text=Waiting%3A%20This%20means%20the%20Goroutine,root%20cause%20for%20bad%20performance.
--
+- https://www.ardanlabs.com/blog/2018/08/scheduling-in-go-part2.html
